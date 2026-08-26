@@ -1,4 +1,4 @@
-# DSH AVCON ZenTao Plugin
+# DSH-ZENTAO
 
 [中文](README.md) | English
 
@@ -13,7 +13,7 @@ A floating ZenTao work center for [DeepSeek Harness](https://github.com/deepseek
 - Drag a card (or the 「拖拽到聊天框」 button) into the chat input to insert an editable Markdown reference.
 - Selectable auto-refresh interval (30 s / 1 min / 5 min / 10 min / 30 min / off).
 - The login state (server, account, Token) persists to `~/.zentao-sidebar-config.json` and is restored after updates or restarts.
-- AVCON dark / red themes through the `overlay/` tree.
+- DSH dark / red themes through the `overlay/` tree.
 
 ## How it works
 
@@ -35,8 +35,8 @@ The overlay targets the DeepSeek Harness `0.1.0-rc.5` package line. The installe
 ## Install from source
 
 ```sh
-git clone https://github.com/haoyu-qi/dsh-avcon-zentao.git
-cd dsh-avcon-zentao
+git clone https://github.com/haoyu-qi/dsh-zentao.git
+cd dsh-zentao
 node scripts/install.mjs /absolute/path/to/deepseek-harness
 ```
 
@@ -47,28 +47,28 @@ cd /absolute/path/to/deepseek-harness
 pnpm install
 pnpm run build
 node apps/cli/lib/bin.js plugin --profile web add \
-  ./packages/bundle/avcon-zentao \
+  ./packages/bundle/zentao \
   ./packages/host/zentao-cli-gateway \
   ./packages/client/ui-zentao-notifications
 node apps/cli/lib/bin.js web
 ```
 
-The three local paths are passed in one command because package-manager links do not install a linked workspace package's dependencies into the target profile. Only `@deepseek-ai/dsh-avcon-zentao` declares `dsh.bundle`, so the profile activates one bundle.
+The three local paths are passed in one command because package-manager links do not install a linked workspace package's dependencies into the target profile. Only `@deepseek-ai/dsh-zentao` declares `dsh.bundle`, so the profile activates one bundle.
 
 ## Remove
 
 ```sh
-node apps/cli/lib/bin.js plugin --profile web remove @deepseek-ai/dsh-avcon-zentao
+node apps/cli/lib/bin.js plugin --profile web remove @deepseek-ai/dsh-zentao
 ```
 
 Removing the profile bundle removes the ZenTao runtime rows. The local `~/.zentao-sidebar-config.json` may still hold the server, account, and Token; delete it manually if desired.
 
 ## Repository layout
 
-- `packages/bundle/avcon-zentao` — installable profile bundle and Cordis patch.
+- `packages/bundle/zentao` — installable profile bundle and Cordis patch.
 - `packages/host/zentao-cli-gateway` — loopback Host gateway that fetches tasks/bugs/stories through the REST API v2 and persists the login state.
 - `packages/client/ui-zentao-notifications` — the browser-side floating work-center sidebar.
-- `overlay` — AVCON dark / red themes and responsive layout overrides.
+- `overlay` — DSH dark / red themes and responsive layout overrides.
 - `scripts/install.mjs` — copies the three packages and the overlay into the Harness checkout and registers TypeScript project references.
 
 ## License

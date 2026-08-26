@@ -37,7 +37,7 @@ function copyTree(source, target) {
 }
 
 for (const packagePath of [
-  'packages/bundle/avcon-zentao',
+  'packages/bundle/zentao',
   'packages/client/ui-zentao-notifications',
   'packages/host/zentao-cli-gateway',
 ]) {
@@ -71,9 +71,9 @@ updateJson('tsconfig.client.json', config => {
 
 updateJson('tsconfig.host.json', config => {
   if (!Array.isArray(config.references)) throw new Error('tsconfig.host.json has no references')
-  addReference(config.references, './packages/bundle/avcon-zentao')
+  addReference(config.references, './packages/bundle/zentao')
   addReference(config.references, './packages/host/zentao-cli-gateway')
 })
 
-console.log(`Installed DSH AVCON ZenTao sources into ${targetRoot}`)
+console.log(`Installed DSH-ZENTAO sources into ${targetRoot}`)
 console.log('Next: pnpm install && pnpm run build')

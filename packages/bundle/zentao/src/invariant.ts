@@ -1,11 +1,11 @@
-/** Package-owned invariant companion for the AVCON ZenTao bundle. */
+/** Package-owned invariant companion for the DSH ZenTao bundle. */
 import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
-const PACKAGE_NAME = '@deepseek-ai/dsh-avcon-zentao'
+const PACKAGE_NAME = '@deepseek-ai/dsh-zentao'
 
 /** Cordis companion plugin name. */
-export const name = 'avcon-zentao-bundle-invariant'
+export const name = 'zentao-bundle-invariant'
 /** Service required before the companion can register. */
 export const inject = ['invariants']
 

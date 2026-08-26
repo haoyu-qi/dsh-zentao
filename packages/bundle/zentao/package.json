@@ -1,14 +1,14 @@
 {
-  "name": "@deepseek-ai/dsh-avcon-zentao",
-  "description": "Installable AVCON Web customization and personal ZenTao floating work-center bundle",
+  "name": "@deepseek-ai/dsh-zentao",
+  "description": "Installable DSH Web customization and personal ZenTao floating work-center bundle",
   "version": "0.1.0-rc.5",
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/haoyu-qi/dsh-avcon-zentao.git",
-    "directory": "packages/bundle/avcon-zentao"
+    "url": "git+https://github.com/haoyu-qi/dsh-zentao.git",
+    "directory": "packages/bundle/zentao"
   },
   "type": "module",
   "main": "lib/index.js",

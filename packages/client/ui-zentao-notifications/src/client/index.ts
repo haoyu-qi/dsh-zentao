@@ -9,14 +9,14 @@ import { ZentaoSidebar } from './ZentaoSidebar.tsx'
 /** Services required by the ZenTao sidebar plugin. */
 export const inject = ['slots', 'connection']
 
-/** Mount the additive frame overlay entry and enable the AVCON theme hook.
+/** Mount the additive frame overlay entry and enable the DSH theme hook.
  * @param ctx - Client root context.
  */
 export function apply(ctx: ClientContext): void {
   const connection = (ctx as ClientContext & { connection: ConnectionHandle }).connection
   ctx.effect(() => {
-    document.body.dataset['avconZentao'] = ''
-    return () => { delete document.body.dataset['avconZentao'] }
+    document.body.dataset['zentao'] = ''
+    return () => { delete document.body.dataset['zentao'] }
   })
   ctx.slots.inject('shell.overlay', () => ctx.slots.register({
     name: 'shell.overlay',

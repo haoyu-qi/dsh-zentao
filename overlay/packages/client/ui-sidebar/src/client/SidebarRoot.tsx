@@ -157,8 +157,8 @@ export function SidebarRoot({
       </div>
 
       {wide && (
-        <div className={clsx(css.companyMark, css.wide)} aria-label="AVCON 华平股份">
-          <span className={css.companyLatin}>AVCON</span>
+        <div className={clsx(css.companyMark, css.wide)} aria-label="DSH 华平股份">
+          <span className={css.companyLatin}>DSH</span>
           <span className={css.companyChinese}>华平股份</span>
         </div>
       )}

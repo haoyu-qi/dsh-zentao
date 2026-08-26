@@ -1,4 +1,4 @@
-# DSH AVCON 禅道插件
+# DSH-ZENTAO
 
 中文 | [English](README.en.md)
 
@@ -13,7 +13,7 @@
 - 拖拽卡片（或「拖拽到聊天框」按钮）到对话输入框，自动插入可编辑的 Markdown 引用；
 - 自动刷新间隔可选（30 秒 / 1 分 / 5 分 / 10 分 / 30 分 / 关闭）；
 - 登录态（服务地址、账号、Token）持久化到本地 `~/.zentao-sidebar-config.json`，更新或重启后自动恢复；
-- AVCON 深色 / 红色主题（通过 `overlay/` 覆盖上层界面样式）。
+- DSH 深色 / 红色主题（通过 `overlay/` 覆盖上层界面样式）。
 
 ## 实现说明
 
@@ -37,8 +37,8 @@
 克隆本仓库，并将插件应用到已有的 DeepSeek Harness 检出目录：
 
 ```sh
-git clone https://github.com/haoyu-qi/dsh-avcon-zentao.git
-cd dsh-avcon-zentao
+git clone https://github.com/haoyu-qi/dsh-zentao.git
+cd dsh-zentao
 node scripts/install.mjs /你的/deepseek-harness/绝对路径
 ```
 
@@ -49,28 +49,28 @@ cd /你的/deepseek-harness/绝对路径
 pnpm install
 pnpm run build
 node apps/cli/lib/bin.js plugin --profile web add \
-  ./packages/bundle/avcon-zentao \
+  ./packages/bundle/zentao \
   ./packages/host/zentao-cli-gateway \
   ./packages/client/ui-zentao-notifications
 node apps/cli/lib/bin.js web
 ```
 
-源码安装时需要在一条命令中列出三个本地路径，因为包管理器的 link 不会把被链接 workspace 包的依赖安装到目标 profile。只有 `@deepseek-ai/dsh-avcon-zentao` 声明了 `dsh.bundle`，所以 profile 实际只会启用一个 bundle。
+源码安装时需要在一条命令中列出三个本地路径，因为包管理器的 link 不会把被链接 workspace 包的依赖安装到目标 profile。只有 `@deepseek-ai/dsh-zentao` 声明了 `dsh.bundle`，所以 profile 实际只会启用一个 bundle。
 
 ## 卸载
 
 ```sh
-node apps/cli/lib/bin.js plugin --profile web remove @deepseek-ai/dsh-avcon-zentao
+node apps/cli/lib/bin.js plugin --profile web remove @deepseek-ai/dsh-zentao
 ```
 
 移除 bundle 后，禅道运行时记录会一起消失。本地 `~/.zentao-sidebar-config.json` 中可能仍保留服务地址、账号和 Token，可手动删除。
 
 ## 仓库结构
 
-- `packages/bundle/avcon-zentao`：可安装的 profile bundle 与 Cordis patch；
+- `packages/bundle/zentao`：可安装的 profile bundle 与 Cordis patch；
 - `packages/host/zentao-cli-gateway`：仅限回环访问的 Host 网关，通过 REST API v2 拉取任务 / Bug / 需求并持久化登录态；
 - `packages/client/ui-zentao-notifications`：浏览器端悬浮工作台侧边栏；
-- `overlay/`：AVCON 深色 / 红色主题与响应式布局覆盖；
+- `overlay/`：DSH 深色 / 红色主题与响应式布局覆盖；
 - `scripts/install.mjs`：把三个 package 与 overlay 拷贝进 Harness 检出目录并更新 tsconfig。
 
 ## 许可证

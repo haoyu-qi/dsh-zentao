@@ -1,9 +1,9 @@
 {
-  "name": "dsh-avcon-zentao-source",
+  "name": "dsh-zentao-source",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Installable AVCON Web customization and personal ZenTao floating work center for DeepSeek Harness",
+  "description": "Installable DSH Web customization and personal ZenTao floating work center for DeepSeek Harness",
   "scripts": {
     "install:harness": "node scripts/install.mjs"
   },

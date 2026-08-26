@@ -1,34 +1,34 @@
-/* AVCON ZenTao deployment overlay. The ui-zentao-notifications browser plugin
-   sets `data-avcon-zentao` on `document.body` for its lifetime, so every rule
-   here is inert until the avcon-zentao bundle is mounted. The rules override
+/* DSH ZenTao deployment overlay. The ui-zentao-notifications browser plugin
+   sets `data-zentao` on `document.body` for its lifetime, so every rule
+   here is inert until the zentao bundle is mounted. The rules override
    the token ladder design-platform.css declares, which is why this sheet
    imports after it in the shell's base.css; it never modifies the canonical
    light/dark ladder itself. */
 
 body {
-  --dsw-static-avcon-850: rgb(9, 24, 55);
-  --dsw-static-avcon-875: rgb(7, 18, 43);
-  --dsw-static-avcon-900: rgb(4, 13, 34);
-  --dsw-static-avcon-950: rgb(2, 7, 20);
+  --dsw-static-zentao-850: rgb(9, 24, 55);
+  --dsw-static-zentao-875: rgb(7, 18, 43);
+  --dsw-static-zentao-900: rgb(4, 13, 34);
+  --dsw-static-zentao-950: rgb(2, 7, 20);
 }
 
-/* The AVCON dark shell uses one navy field for the page, sidebar, and
+/* The DSH dark shell uses one navy field for the page, sidebar, and
    component layers, mapped onto the shared semantic surface tokens. */
-body[data-ds-dark-theme][data-avcon-zentao] {
-  --dsw-alias-bg-base: var(--dsw-static-avcon-950);
-  --dsw-alias-bg-layer-1: var(--dsw-static-avcon-950);
-  --dsw-alias-bg-layer-2: var(--dsw-static-avcon-950);
-  --dsw-alias-bg-layer-3: var(--dsw-static-avcon-950);
+body[data-ds-dark-theme][data-zentao] {
+  --dsw-alias-bg-base: var(--dsw-static-zentao-950);
+  --dsw-alias-bg-layer-1: var(--dsw-static-zentao-950);
+  --dsw-alias-bg-layer-2: var(--dsw-static-zentao-950);
+  --dsw-alias-bg-layer-3: var(--dsw-static-zentao-950);
   --dsw-specific-input-major: var(--dsw-alias-bg-layer-2);
   --dsw-specific-login-input: var(--dsw-alias-bg-layer-1);
   --dsw-specific-sidebar-fill: var(--dsw-alias-bg-layer-1);
   --dsw-specific-tip: var(--dsw-alias-bg-layer-3);
 }
 
-/* The AVCON ZenTao bundle uses its light-theme switch as a high-contrast red
+/* The DSH ZenTao bundle uses its light-theme switch as a high-contrast red
    presentation. Surfaces share one red field; borders and shadows retain the
    component hierarchy without reintroducing rectangular color blocks. */
-body[data-avcon-zentao]:not([data-ds-dark-theme]) {
+body[data-zentao]:not([data-ds-dark-theme]) {
   --dsw-alias-bg-base: rgb(113, 9, 24);
   --dsw-alias-bg-layer-1: rgb(113, 9, 24);
   --dsw-alias-bg-layer-2: rgb(113, 9, 24);

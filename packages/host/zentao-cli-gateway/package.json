@@ -5,7 +5,7 @@
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/haoyu-qi/dsh-avcon-zentao.git",
+    "url": "git+https://github.com/haoyu-qi/dsh-zentao.git",
     "directory": "packages/host/zentao-cli-gateway"
   },
   "type": "module",

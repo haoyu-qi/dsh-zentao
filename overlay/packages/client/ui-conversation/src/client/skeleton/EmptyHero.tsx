@@ -65,7 +65,7 @@ export function WorkspaceChip({ buttonRef, label, menuOpen = false, onClick, t }
 }
 
 /**
- * The standard glow plus the AVCON bundle's energy-ribbon alternative.
+ * The standard glow plus the DSH bundle's energy-ribbon alternative.
  * @param props.className - positioning class from the owner.
  * @returns both theme-scoped decorative assets.
  */
@@ -95,8 +95,8 @@ export function HeroGlow({ className }: { className?: string | undefined }) {
       </svg>
       <img
         className={className}
-        data-avcon-hero-glow
-        src="/avcon-energy-ribbon-dark.png?v=1"
+        data-zentao-hero-glow
+        src="/zentao-energy-ribbon-dark.png?v=1"
         alt=""
         aria-hidden="true"
       />

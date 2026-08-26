@@ -336,23 +336,23 @@
   pointer-events: none;
 }
 
-[data-avcon-hero-glow] {
+[data-zentao-hero-glow] {
   display: none;
 }
 
-:global(body[data-avcon-zentao]) .root[data-phase='hero'] {
+:global(body[data-zentao]) .root[data-phase='hero'] {
   --dsh-chat-content-width: clamp(908px, 56vw, 2160px);
 }
 
-:global(body[data-avcon-zentao]) .composerHero {
+:global(body[data-zentao]) .composerHero {
   top: clamp(67px, 6vh, 150px);
 }
 
-:global(body[data-avcon-zentao]) [data-default-hero-glow] {
+:global(body[data-zentao]) [data-default-hero-glow] {
   display: none;
 }
 
-:global(body[data-avcon-zentao]) [data-avcon-hero-glow] {
+:global(body[data-zentao]) [data-zentao-hero-glow] {
   display: block;
   bottom: clamp(288px, 15vw, 520px);
   width: min(74vw, 2800px);
@@ -365,8 +365,8 @@
   mask-image: linear-gradient(to bottom, transparent 0%, #000 22%, #000 78%, transparent 100%);
 }
 
-:global(body[data-avcon-zentao]:not([data-ds-dark-theme])) [data-avcon-hero-glow] {
-  content: url('/avcon-energy-ribbon-red.png?v=1');
+:global(body[data-zentao]:not([data-ds-dark-theme])) [data-zentao-hero-glow] {
+  content: url('/zentao-energy-ribbon-red.png?v=1');
 }
 
 .heroWorkspaceRow {
@@ -380,7 +380,7 @@
   padding-left: 20px;
 }
 
-:global(body[data-avcon-zentao]) .heroWorkspaceRow {
+:global(body[data-zentao]) .heroWorkspaceRow {
   margin-top: clamp(50px, 3.2vw, 96px);
 }
 

@@ -194,13 +194,13 @@ export function AppFrame({
       <div className={css.stormLayer} data-shell-energy aria-hidden="true">
         <img
           className={`${css.stormRibbon} ${css.stormRibbonLower}`}
-          src="/avcon-energy-ribbon-dark.png?v=1"
+          src="/zentao-energy-ribbon-dark.png?v=1"
           alt=""
           draggable={false}
         />
         <img
           className={`${css.stormRibbon} ${css.stormRibbonUpper}`}
-          src="/avcon-energy-ribbon-dark.png?v=1"
+          src="/zentao-energy-ribbon-dark.png?v=1"
           alt=""
           draggable={false}
         />

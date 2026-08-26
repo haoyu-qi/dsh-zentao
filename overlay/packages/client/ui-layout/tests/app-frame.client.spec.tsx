@@ -148,7 +148,7 @@ describe('AppFrame', () => {
     expect(layer?.getAttribute('aria-hidden')).toBe('true')
     expect(layer?.querySelectorAll('img')).toHaveLength(2)
     expect([...layer!.querySelectorAll('img')].map(image => image.getAttribute('src')))
-      .toEqual(['/avcon-energy-ribbon-dark.png?v=1', '/avcon-energy-ribbon-dark.png?v=1'])
+      .toEqual(['/zentao-energy-ribbon-dark.png?v=1', '/zentao-energy-ribbon-dark.png?v=1'])
   })
 
   it('renders the session pair with empty owner shares (sessionId is framework-standard)', () => {

@@ -81,7 +81,7 @@
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
 }
 
-:global(body[data-avcon-zentao]) .card {
+:global(body[data-zentao]) .card {
   border-color: var(--dsw-alias-state-business-primary);
   box-shadow:
     var(--dsw-shadow-lv2),
@@ -312,7 +312,7 @@
   min-height: 52px;
 }
 
-:global(body[data-avcon-zentao]) .hero .mirror {
+:global(body[data-zentao]) .hero .mirror {
   min-height: clamp(100px, 5.2vw, 180px);
 }
 

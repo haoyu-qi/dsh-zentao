@@ -38,7 +38,7 @@
   color: var(--dsw-alias-label-primary);
 }
 
-:global(body[data-avcon-zentao]) .headline {
+:global(body[data-zentao]) .headline {
   grid-template-columns: clamp(38px, 1.8vw, 58px) auto auto;
   font-size: clamp(32px, 1.5vw, 52px);
   line-height: 1.25;

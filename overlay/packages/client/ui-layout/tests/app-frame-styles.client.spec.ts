@@ -7,7 +7,7 @@ const css = readFileSync(fileURLToPath(new URL('../src/client/AppFrame.module.cs
 describe('AppFrame energy background styles', () => {
   it('keeps the animated layer non-interactive and theme-specific', () => {
     expect(css).toMatch(/\.stormLayer\s*\{[^}]*pointer-events:\s*none;/s)
-    expect(css).toContain("content: url('/avcon-energy-ribbon-red.png?v=1')")
+    expect(css).toContain("content: url('/zentao-energy-ribbon-red.png?v=1')")
     expect(css).toMatch(/\.stormRibbonLower\s*\{[^}]*19s[^}]*infinite/s)
     expect(css).toMatch(/\.stormRibbonUpper\s*\{[^}]*27s[^}]*infinite/s)
   })

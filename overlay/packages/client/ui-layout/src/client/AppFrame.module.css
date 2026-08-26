@@ -62,7 +62,7 @@
   mix-blend-mode: screen;
 }
 
-:global(body[data-avcon-zentao]) .stormLayer {
+:global(body[data-zentao]) .stormLayer {
   display: block;
 }
 
@@ -75,12 +75,12 @@
   will-change: transform, opacity;
 }
 
-:global(body[data-avcon-zentao]:not([data-ds-dark-theme])) .stormLayer {
+:global(body[data-zentao]:not([data-ds-dark-theme])) .stormLayer {
   mix-blend-mode: lighten;
 }
 
-:global(body[data-avcon-zentao]:not([data-ds-dark-theme])) .stormRibbon {
-  content: url('/avcon-energy-ribbon-red.png?v=1');
+:global(body[data-zentao]:not([data-ds-dark-theme])) .stormRibbon {
+  content: url('/zentao-energy-ribbon-red.png?v=1');
 }
 
 .stormRibbonLower {
