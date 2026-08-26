@@ -1,4 +1,4 @@
-/** Package-owned invariant companion for the ZenTao notifications UI plugin. */
+/** Package-owned invariant companion for the ZenTao sidebar UI plugin. */
 
 /* jscpd:ignore-start */
 import type { Context } from '@deepseek-ai/cordis'

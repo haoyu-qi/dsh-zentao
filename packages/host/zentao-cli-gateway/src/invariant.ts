@@ -1,4 +1,4 @@
-/** Package-owned invariant companion for the ZenTao CLI gateway. */
+/** Package-owned invariant companion for the ZenTao REST gateway. */
 import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
