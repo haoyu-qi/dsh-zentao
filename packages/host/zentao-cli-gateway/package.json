@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-host-zentao-cli-gateway",
-  "description": "Loopback Web gateway for personal ZenTao tasks and bugs through zentao-cli",
+  "description": "Loopback Web gateway for personal ZenTao tasks, bugs and stories through the ZenTao REST API v2",
   "version": "0.1.0-rc.5",
   "publishConfig": { "access": "public" },
   "repository": {
@@ -19,9 +19,6 @@
   },
   "files": ["lib/index.js", "lib/invariant.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
-  "dependencies": {
-    "zentao-cli": "0.2.0"
-  },
   "peerDependencies": {
     "@deepseek-ai/dsh-client-connection": "workspace:^",
     "@deepseek-ai/dsh-invariants": "workspace:^",

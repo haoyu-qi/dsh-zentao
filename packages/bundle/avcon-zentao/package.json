@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-avcon-zentao",
-  "description": "Installable AVCON Web customization and personal ZenTao CLI work-center bundle",
+  "description": "Installable AVCON Web customization and personal ZenTao floating work-center bundle",
   "version": "0.1.0-rc.5",
   "publishConfig": {
     "access": "public"

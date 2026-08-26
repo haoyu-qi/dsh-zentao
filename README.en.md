@@ -2,19 +2,31 @@
 
 [中文](README.md) | English
 
-AVCON-branded Web customization and a personal ZenTao CLI work center for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
+A floating ZenTao work center for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). A floating 「禅道」 button on the right edge opens a right-side panel listing the **tasks, bugs and stories** assigned to the signed-in account. Items can be dragged into the chat input, opened at their original ZenTao URL, and refreshed automatically. The login state persists locally.
 
-The repository packages the customization as one profile bundle, backed by one Host gateway and one browser plugin. It provides:
+## Features
 
-- unified AVCON dark and red themes with 2K and 4K layouts;
-- a ZenTao connection-state indicator;
-- server, account, and password login through the official `zentao-cli`;
-- optional persistence of the server and account only;
-- automatic retrieval of tasks and Bugs assigned to the authenticated account;
-- draggable task and Bug references with the original ZenTao URL and a CLI-first retrieval instruction;
-- one bundle lifecycle: installing or removing `@deepseek-ai/dsh-avcon-zentao` activates or deactivates both runtime components and the scoped presentation.
+- Floating 「禅道」 button with a right-slide work-center panel.
+- Three tabs: **Tasks / Bugs / Stories** (ZenTao "assigned to me" data).
+- Click a card to view its details (status, priority, severity, description / reproduction steps, and more).
+- Every card and the detail view carry an 「原地址」 link to the original ZenTao page.
+- Drag a card (or the 「拖拽到聊天框」 button) into the chat input to insert an editable Markdown reference.
+- Selectable auto-refresh interval (30 s / 1 min / 5 min / 10 min / 30 min / off).
+- The login state (server, account, Token) persists to `~/.zentao-sidebar-config.json` and is restored after updates or restarts.
+- AVCON dark / red themes through the `overlay/` tree.
 
-Passwords and ZenTao Tokens are not committed to this repository. The password is passed only to the managed login subprocess environment and is not saved by the browser plugin.
+## How it works
+
+The plugin talks to the **ZenTao RESTful API v2** directly (no `zentao-cli` dependency):
+
+- Login: `POST /api.php/v2/users/login` returns a Token; later requests send it in the `Token` header.
+- Data: because some ZenTao versions do not expose the `/my/*` endpoints, the gateway iterates products and executions with scoped endpoints plus `browseType`:
+  - Stories: `/products/{id}/stories?browseType=assignedtome`
+  - Bugs: `/products/{id}/bugs?browseType=assigntome` (ZenTao's spelling variant for bugs)
+  - Tasks: `/executions/{id}/tasks?browseType=unclosed` filtered by `assignedTo`
+- The Host gateway runs `curl` subprocesses and raises the stdout cap to 2 MB so large task lists are not truncated by the 64 KB default.
+
+No ZenTao passwords, Tokens, or API keys are committed to this repository. The password is used only to obtain a Token; the Token is stored only in `~/.zentao-sidebar-config.json` on the local machine and is never uploaded.
 
 ## Compatibility
 
@@ -49,19 +61,15 @@ The three local paths are passed in one command because package-manager links do
 node apps/cli/lib/bin.js plugin --profile web remove @deepseek-ai/dsh-avcon-zentao
 ```
 
-Removing the profile bundle removes both ZenTao runtime rows. Saved server and account convenience fields may remain in browser-local storage; passwords are never stored.
+Removing the profile bundle removes the ZenTao runtime rows. The local `~/.zentao-sidebar-config.json` may still hold the server, account, and Token; delete it manually if desired.
 
 ## Repository layout
 
 - `packages/bundle/avcon-zentao` — installable profile bundle and Cordis patch.
-- `packages/host/zentao-cli-gateway` — loopback RPC gateway and `zentao-cli` subprocess adapter.
-- `packages/client/ui-zentao-notifications` — account UI, status indicator, polling, work-item cards, and drag payloads.
-- `overlay` — AVCON presentation, composer drop target, responsive shell integration, and visual assets applied to the compatible Harness checkout.
-- `scripts/install.mjs` — deterministic overlay installer and TypeScript project-reference registration.
-
-## Validation
-
-The source was validated in the parent Harness checkout with a complete build, lint, 28 documentation gates, 105 focused bundle/gateway/client tests, isolated profile install/remove checks, and an installed-profile browser boot with no console warnings or errors.
+- `packages/host/zentao-cli-gateway` — loopback Host gateway that fetches tasks/bugs/stories through the REST API v2 and persists the login state.
+- `packages/client/ui-zentao-notifications` — the browser-side floating work-center sidebar.
+- `overlay` — AVCON dark / red themes and responsive layout overrides.
+- `scripts/install.mjs` — copies the three packages and the overlay into the Harness checkout and registers TypeScript project references.
 
 ## License
 

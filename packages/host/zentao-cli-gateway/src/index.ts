@@ -1,30 +1,24 @@
-/** Loopback RPC gateway from the Web shell to the official zentao-cli. */
-import { createRequire } from 'node:module'
-import { dirname, join } from 'node:path'
+/** Loopback RPC gateway from the Web shell to the ZenTao REST API v2. */
+import { readFileSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { RpcResult } from '@deepseek-ai/dsh-host-apiproxy/api'
 import type {} from '@deepseek-ai/dsh-client-connection'
 import type {} from '@deepseek-ai/dsh-subprocess'
 
-export const name = 'zentao-cli-gateway'
+export const name = 'zentao-rest-gateway'
 export const inject = ['connection', 'subprocess']
 
-interface LoginPayload { server: string; account: string; password: string }
+interface LoginPayload { server: string; account: string; password?: string; token?: string }
 interface Profile { server: string; account: string }
-interface Item {
-  id: string
-  kind: 'task' | 'bug'
-  title: string
-  status: string
-  priority: string
-  deadline: string
-  url: string
-}
-interface Snapshot { profile: Profile; tasks: Item[]; bugs: Item[]; fetchedAt: string }
+type Kind = 'task' | 'bug' | 'story'
+/** Raw ZenTao row plus its resolved kind; fields are kept verbatim for the client. */
+interface ZentaoItem { id: string; kind: Kind; [key: string]: unknown }
+interface Snapshot { profile: Profile; tasks: ZentaoItem[]; bugs: ZentaoItem[]; stories: ZentaoItem[]; fetchedAt: string }
 
-const require = createRequire(import.meta.url)
-const cliScript = join(dirname(require.resolve('zentao-cli/package.json')), 'bin/zentao.js')
-const OUTPUT_CAP = 1024 * 1024
+const CONFIG_PATH = join(homedir(), '.zentao-sidebar-config.json')
+const OUTPUT_CAP = 2 * 1024 * 1024
 
 function failure(message: string): RpcResult<unknown> {
   return { ok: false, error: { code: 'internal', message, details: {} } }
@@ -36,89 +30,116 @@ function object(value: unknown): Record<string, unknown> | undefined {
     : undefined
 }
 
-function textField(row: Record<string, unknown>, ...keys: string[]): string {
-  for (const key of keys) {
-    const value = row[key]
-    if (typeof value === 'string' || typeof value === 'number') return String(value)
-    const nested = object(value)
-    if (nested !== undefined) {
-      const label = nested.realname ?? nested.name ?? nested.account
-      if (typeof label === 'string') return label
-    }
-  }
-  return ''
-}
-
-function detailUrl(server: string, kind: Item['kind'], row: Record<string, unknown>, id: string): string {
-  const supplied = textField(row, 'url', 'link', 'webUrl')
-  if (supplied !== '') {
-    try {
-      const url = new URL(supplied, `${server}/`)
-      if (url.protocol === 'http:' || url.protocol === 'https:') return url.toString()
-    } catch {
-      // Invalid CLI link fields fall back to the stable ZenTao detail route below.
-    }
-  }
-  const url = new URL('index.php', `${server}/`)
-  url.searchParams.set('m', kind)
-  url.searchParams.set('f', 'view')
-  url.searchParams.set(kind === 'task' ? 'taskID' : 'bugID', id)
-  return url.toString()
-}
-
-function normalize(kind: Item['kind'], value: unknown, server: string): Item[] {
-  const root = object(value)
-  const rows = Array.isArray(value) ? value : root?.data
-  if (!Array.isArray(rows)) return []
-  return rows.flatMap((candidate): Item[] => {
-    const row = object(candidate)
-    if (row === undefined) return []
-    const id = textField(row, 'id')
-    return [{
-      id,
-      kind,
-      title: textField(row, 'name', 'title') || `${kind === 'task' ? '任务' : 'Bug'} #${id}`,
-      status: textField(row, 'status') || 'unknown',
-      priority: textField(row, 'pri', 'priority') || '-',
-      deadline: textField(row, 'deadline', 'resolvedDate', 'openedDate') || '-',
-      url: detailUrl(server, kind, row, id),
-    }]
-  })
-}
-
-function rows(value: unknown): unknown[] {
-  if (Array.isArray(value)) return value
-  const root = object(value)
-  return Array.isArray(root?.data) ? root.data : []
+function normalizeUrl(input: string): string {
+  let url = input.trim()
+  if (url === '') return ''
+  url = url.replace(/\/+$/, '')
+  url = url.replace(/\/api\.php(\/v[0-9]+)?$/i, '')
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) url = `https://${url}`
+  return url
 }
 
 function loginPayload(value: unknown): LoginPayload {
   const row = object(value)
-  const server = row?.server
-  const account = row?.account
-  const password = row?.password
-  if (typeof server !== 'string' || typeof account !== 'string' || typeof password !== 'string') {
-    throw new Error('服务器地址、账号和密码均为必填项')
+  if (row === undefined) throw new Error('登录参数缺失')
+  const server = row.server
+  const account = row.account
+  if (typeof server !== 'string' || typeof account !== 'string') throw new Error('服务器地址和账号均为必填项')
+  const password = typeof row.password === 'string' ? row.password : undefined
+  const token = typeof row.token === 'string' ? row.token : undefined
+  if (token === undefined && (password === undefined || password === '')) {
+    throw new Error('需要提供密码或 Token')
   }
-  const url = new URL(server)
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('服务器地址必须使用 HTTP 或 HTTPS')
-  if (url.username !== '' || url.password !== '') throw new Error('服务器地址不能包含账户或密码')
-  if (account.trim() === '' || password === '') throw new Error('账号和密码不能为空')
-  return { server: url.toString().replace(/\/$/, ''), account: account.trim(), password }
+  const normalized = normalizeUrl(server)
+  if (normalized === '') throw new Error('服务器地址格式不正确')
+  return { server: normalized, account: account.trim(), password, token }
 }
 
-/** Register the loopback-only ZenTao RPC channel.
- * @param ctx - Host context carrying Connection and Subprocess.
- */
-export function apply(ctx: Context): void {
-  let current: Profile | undefined
+function respError(data: Record<string, unknown>): string | undefined {
+  const status = data.status
+  if (status === 'fail' || status === 'failed' || status === 'error') {
+    const message = data.message ?? data.reason ?? data.error
+    return typeof message === 'string' ? message : '请求失败'
+  }
+  return undefined
+}
 
-  const run = async (args: readonly string[], signal: AbortSignal, env?: Record<string, string>): Promise<string> => {
-    const executable = await ctx.subprocess.resolveExecutable(process.execPath, env, signal)
+function extractList(data: Record<string, unknown>, getter: string): unknown[] {
+  const direct = data[getter]
+  if (Array.isArray(direct)) return direct
+  const inner = object(data.data)
+  if (inner !== undefined && Array.isArray(inner[getter])) return inner[getter] as unknown[]
+  return []
+}
+
+function dedupe(list: unknown[]): unknown[] {
+  const seen = new Set<string>()
+  const out: unknown[] = []
+  for (const candidate of list) {
+    const row = object(candidate)
+    const id = row === undefined ? undefined : row.id
+    if (id === undefined || id === null) { out.push(candidate); continue }
+    const key = String(id)
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(candidate)
+  }
+  return out
+}
+
+async function runWithLimit<T>(items: T[], limit: number, worker: (item: T) => Promise<unknown[]>): Promise<unknown[][]> {
+  const results: unknown[][] = new Array(items.length)
+  let next = 0
+  const runOne = async (): Promise<void> => {
+    while (true) {
+      const index = next
+      next += 1
+      if (index >= items.length) return
+      results[index] = await worker(items[index])
+    }
+  }
+  const runners: Promise<void>[] = []
+  const count = Math.min(limit, items.length)
+  for (let i = 0; i < count; i += 1) runners.push(runOne())
+  await Promise.all(runners)
+  return results
+}
+
+/** Register the loopback-only ZenTao REST RPC channel. */
+export function apply(ctx: Context): void {
+  const state = { url: '', account: '', token: '' }
+
+  try {
+    const cfg = JSON.parse(readFileSync(CONFIG_PATH, 'utf8')) as Record<string, unknown>
+    if (typeof cfg.url === 'string') state.url = cfg.url
+    if (typeof cfg.account === 'string') state.account = cfg.account
+    if (typeof cfg.token === 'string') state.token = cfg.token
+  } catch {
+    // First run or malformed config; the client drives login.
+  }
+
+  const persist = (): void => {
+    try {
+      writeFileSync(CONFIG_PATH, JSON.stringify({ url: state.url, account: state.account, token: state.token }))
+    } catch {
+      // Local persistence is best-effort; a failed write must not break login.
+    }
+  }
+
+  const curl = async (method: string, path: string, body: unknown, signal: AbortSignal): Promise<Record<string, unknown>> => {
+    const url = `${state.url}/api.php/v2${path}`
+    const args = ['curl', '-sS', '--max-time', '25']
+    if (method !== 'GET') args.push('-X', method)
+    if (body !== undefined) {
+      args.push('-H', 'Content-Type: application/json')
+      args.push('--data-binary', JSON.stringify(body))
+    }
+    if (state.token !== '') args.push('-H', `Token: ${state.token}`)
+    args.push(url)
+    const executable = await ctx.subprocess.resolveExecutable('curl', undefined, signal)
     const handle = ctx.subprocess.spawn({
-      argv: [executable, cliScript, ...args],
+      argv: [executable, ...args],
       cwd: process.cwd(),
-      env,
       signal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
       graceMs: 3_000,
       stdio: {
@@ -130,112 +151,127 @@ export function apply(ctx: Context): void {
     const outcome = await handle.done
     const stdout = handle.collected.stdout?.readFrom(0).text ?? ''
     const stderr = handle.collected.stderr?.readFrom(0).text ?? ''
-    if (outcome.exitCode !== 0) throw new Error(stderr.trim() || stdout.trim() || 'zentao-cli 执行失败')
-    return stdout
+    if (outcome.exitCode !== 0) throw new Error(stderr.trim() || stdout.trim() || 'curl 执行失败')
+    return JSON.parse(stdout) as Record<string, unknown>
   }
 
-  const listTasks = async (profile: Profile, signal: AbortSignal): Promise<Item[]> => {
-    const projectOutput = await run([
-      'project',
-      '--format=json',
-      '--pick=id',
-      '--page=1',
-      '--recPerPage=100',
-      '--sort=id_desc',
-    ], signal)
-    const projectIds = rows(JSON.parse(projectOutput) as unknown)
-      .map(candidate => object(candidate)?.id)
-      .filter((id): id is string | number => typeof id === 'string' || typeof id === 'number')
-    const executionIds = new Set<string>()
-    for (const projectId of projectIds) {
-      if (executionIds.size >= 100) break
-      const output = await run([
-        'execution',
-        `--project=${String(projectId)}`,
-        '--format=json',
-        '--pick=id',
-        '--page=1',
-        '--recPerPage=100',
-        '--sort=id_desc',
-      ], signal)
-      for (const candidate of rows(JSON.parse(output) as unknown)) {
-        const id = object(candidate)?.id
-        if (typeof id === 'string' || typeof id === 'number') executionIds.add(String(id))
-        if (executionIds.size >= 100) break
+  const httpGet = async (path: string, signal: AbortSignal): Promise<Record<string, unknown>> => {
+    const data = await curl('GET', path, undefined, signal)
+    const error = respError(data)
+    if (error !== undefined) throw new Error(error)
+    return data
+  }
+
+  const list = async (path: string, getter: string, signal: AbortSignal): Promise<unknown[]> => {
+    const data = await httpGet(path, signal)
+    return extractList(data, getter)
+  }
+
+  const doLogin = async (request: LoginPayload, signal: AbortSignal): Promise<Snapshot> => {
+    if (request.token !== undefined) {
+      state.token = request.token
+    } else {
+      const data = await curl('POST', '/users/login', { account: request.account, password: request.password ?? '' }, signal)
+      if (data.status !== 'success' || typeof data.token !== 'string') {
+        const reason = typeof data.reason === 'string' ? data.reason : '登录失败，请检查账号密码'
+        throw new Error(reason)
+      }
+      state.token = data.token
+      const user = object(data.user)
+      if (user !== undefined && typeof user.account === 'string') state.account = user.account
+    }
+    state.url = request.server
+    state.account = request.account
+    persist()
+    return await refresh(signal)
+  }
+
+  const doFetchMine = async (signal: AbortSignal): Promise<Snapshot> => {
+    if (state.url === '') throw new Error('未配置禅道地址')
+    if (state.token === '') throw new Error('未登录，请先配置账号')
+    const account = state.account
+
+    const products = await list('/products?recPerPage=1000&pageID=1', 'products', signal)
+    const executions = await list('/executions?recPerPage=1000&pageID=1', 'executions', signal)
+
+    interface Job { kind: Kind; id: unknown }
+    const jobs: Job[] = []
+    for (const candidate of products) {
+      const id = object(candidate)?.id
+      if (id !== undefined) { jobs.push({ kind: 'story', id }); jobs.push({ kind: 'bug', id }) }
+    }
+    for (const candidate of executions) {
+      const row = object(candidate)
+      if (row === undefined || row.status === 'closed') continue
+      if (row.id !== undefined) jobs.push({ kind: 'task', id: row.id })
+    }
+
+    const results = await runWithLimit(jobs, 6, async (job) => {
+      let base: string
+      let browse: string
+      let getter: string
+      if (job.kind === 'task') { base = `/executions/${String(job.id)}/tasks`; browse = 'unclosed'; getter = 'tasks' }
+      else if (job.kind === 'bug') { base = `/products/${String(job.id)}/bugs`; browse = 'assigntome'; getter = 'bugs' }
+      else { base = `/products/${String(job.id)}/stories`; browse = 'assignedtome'; getter = 'stories' }
+      return await list(`${base}?browseType=${browse}&recPerPage=200&pageID=1`, getter, signal)
+    })
+
+    const tasks: unknown[] = []
+    const bugs: unknown[] = []
+    const stories: unknown[] = []
+    for (let index = 0; index < jobs.length; index += 1) {
+      const rows = results[index] ?? []
+      const target = jobs[index].kind === 'task' ? tasks : jobs[index].kind === 'bug' ? bugs : stories
+      for (const row of rows) {
+        if (object(row)?.assignedTo !== account) continue
+        target.push(row)
       }
     }
-    const tasks = new Map<string, Item>()
-    const boundedExecutionIds = [...executionIds]
-    for (let index = 0; index < boundedExecutionIds.length; index += 8) {
-      await Promise.all(boundedExecutionIds.slice(index, index + 8).map(async (executionId) => {
-        const output = await run([
-          'task',
-          `--executionID=${executionId}`,
-          '--format=json',
-          '--page=1',
-          '--recPerPage=100',
-          '--status=assignedtome',
-          '--sort=id_desc',
-        ], signal)
-        for (const task of normalize('task', JSON.parse(output) as unknown, profile.server)) tasks.set(task.id, task)
-      }))
-    }
-    return [...tasks.values()]
-      .sort((left, right) => Number(right.id) - Number(left.id))
-      .slice(0, 100)
-  }
 
-  const listBugs = async (profile: Profile, signal: AbortSignal): Promise<Item[]> => {
-    const productOutput = await run([
-      'product',
-      '--format=json',
-      '--pick=id',
-      '--page=1',
-      '--recPerPage=100',
-      '--sort=id_desc',
-    ], signal)
-    const productIds = rows(JSON.parse(productOutput) as unknown)
-      .map(candidate => object(candidate)?.id)
-      .filter((id): id is string | number => typeof id === 'string' || typeof id === 'number')
-    const bugs = new Map<string, Item>()
-    for (let index = 0; index < productIds.length; index += 8) {
-      await Promise.all(productIds.slice(index, index + 8).map(async (productId) => {
-        const output = await run([
-          'bug',
-          `--product=${String(productId)}`,
-          '--format=json',
-          '--page=1',
-          '--recPerPage=100',
-          '--browseType=assigntome',
-          '--sort=id_desc',
-        ], signal)
-        for (const bug of normalize('bug', JSON.parse(output) as unknown, profile.server)) bugs.set(bug.id, bug)
-      }))
+    return {
+      profile: { server: state.url, account: state.account },
+      tasks: dedupe(tasks) as ZentaoItem[],
+      bugs: dedupe(bugs) as ZentaoItem[],
+      stories: dedupe(stories) as ZentaoItem[],
+      fetchedAt: new Date().toISOString(),
     }
-    return [...bugs.values()]
-      .sort((left, right) => Number(right.id) - Number(left.id))
-      .slice(0, 100)
   }
 
   const refresh = async (signal: AbortSignal): Promise<Snapshot> => {
-    if (current === undefined) throw new Error('请先登录禅道账户')
-    const [tasks, bugs] = await Promise.all([listTasks(current, signal), listBugs(current, signal)])
-    return { profile: current, tasks, bugs, fetchedAt: new Date().toISOString() }
+    if (state.token === '') throw new Error('请先登录禅道账户')
+    return await doFetchMine(signal)
   }
 
   ctx.effect(() => ctx.connection.rpc.handle('/zentao', async (endpoint, payload, signal) => {
     try {
+      if (endpoint === 'getConfig') {
+        return { ok: true, value: { server: state.url, account: state.account, hasToken: state.token !== '' } }
+      }
       if (endpoint === 'login') {
-        const request = loginPayload(payload)
-        await run(['login', '--useEnv'], signal, {
-          ZENTAO_URL: request.server,
-          ZENTAO_ACCOUNT: request.account,
-          ZENTAO_PASSWORD: request.password,
-        })
-        current = { server: request.server, account: request.account }
+        return { ok: true, value: await doLogin(loginPayload(payload), signal) }
+      }
+      if (endpoint === 'refresh') {
         return { ok: true, value: await refresh(signal) }
       }
-      if (endpoint === 'refresh') return { ok: true, value: await refresh(signal) }
+      if (endpoint === 'fetchDetail') {
+        const row = object(payload)
+        const kind = row?.kind
+        const id = row?.id
+        const map: Record<string, string> = { task: '/tasks', bug: '/bugs', story: '/stories' }
+        const getter: Record<string, string> = { task: 'task', bug: 'bug', story: 'story' }
+        const base = typeof kind === 'string' ? map[kind] : undefined
+        if (base === undefined) return failure('未知类型')
+        const data = await httpGet(`${base}/${String(id)}`, signal)
+        const item = object(data)?.[getter[kind]] ?? data
+        return { ok: true, value: { item } }
+      }
+      if (endpoint === 'clearConfig') {
+        state.url = ''
+        state.account = ''
+        state.token = ''
+        try { writeFileSync(CONFIG_PATH, JSON.stringify({ url: '', account: '', token: '' })) } catch {}
+        return { ok: true, value: null }
+      }
       return failure(`未知禅道操作：${endpoint}`)
     } catch (error) {
       return failure(error instanceof Error ? error.message : String(error))

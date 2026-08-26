@@ -2,21 +2,31 @@
 
 中文 | [English](README.en.md)
 
-这是一个面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的 AVCON Web 界面定制与个人禅道 CLI 工作中心。
+这是一个面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的禅道（ZenTao）悬浮工作台插件。它在网页右缘提供一个悬浮「禅道」按钮，点击后从右侧滑出面板，展示当前账户名下「指派给我」的**任务、Bug 与需求**，支持拖拽到对话输入框、查看原始链接、自动刷新，并把登录态持久化到本地。
 
-仓库将全部定制整合为一个 profile bundle，由一个 Host 网关和一个浏览器插件共同提供以下能力：
+## 功能
 
-- AVCON 深色与红色主题，统一底图和背景色；
-- 针对 2K、4K 分辨率优化的响应式布局；
-- 禅道服务连接状态指示；
-- 通过官方 `zentao-cli` 登录服务器、账户和密码；
-- 可选择只保存服务器地址与账户，密码始终不保存；
-- 自动拉取当前账户名下的任务和 Bug；
-- 任务和 Bug 卡片保留原始禅道链接；
-- 将工作项拖入对话输入框时，自动插入可编辑的 Markdown 引用和 CLI 优先读取说明；
-- 安装或移除 `@deepseek-ai/dsh-avcon-zentao` 时，Host 网关、浏览器插件与 AVCON 视觉样式会一起启用或停用。
+- 悬浮「禅道」按钮，点击从右侧滑出工作台面板；
+- 三个标签页：**任务 / Bug / 需求**（对应禅道「指派给我」数据）；
+- 点击卡片查看详情（状态、优先级、严重程度、描述 / 重现步骤等）；
+- 每条卡片和详情页都带「原地址」链接，可直接打开禅道原始页面；
+- 拖拽卡片（或「拖拽到聊天框」按钮）到对话输入框，自动插入可编辑的 Markdown 引用；
+- 自动刷新间隔可选（30 秒 / 1 分 / 5 分 / 10 分 / 30 分 / 关闭）；
+- 登录态（服务地址、账号、Token）持久化到本地 `~/.zentao-sidebar-config.json`，更新或重启后自动恢复；
+- AVCON 深色 / 红色主题（通过 `overlay/` 覆盖上层界面样式）。
 
-仓库不包含任何禅道密码、Token 或 API 密钥。密码只会传递给受管的登录子进程环境，不会被浏览器插件保存。
+## 实现说明
+
+插件通过 **禅道 RESTful API v2** 直接访问数据（不再依赖 `zentao-cli` 命令行）：
+
+- 登录：`POST /api.php/v2/users/login` 换取 Token，后续请求通过 `Token` 头鉴权；
+- 数据：由于部分禅道版本未开放 `/my/*` 接口，改为遍历产品与执行，用作用域接口 + `browseType` 过滤：
+  - 需求：`/products/{id}/stories?browseType=assignedtome`
+  - Bug：`/products/{id}/bugs?browseType=assigntome`（禅道 Bug 的拼写变体）
+  - 任务：`/executions/{id}/tasks?browseType=unclosed` + 按 `assignedTo` 过滤
+- Host 网关通过 `curl` 子进程发起请求，并把 stdout 上限提高到 2MB，避免任务列表响应被 64KB 默认上限截断。
+
+仓库不包含任何禅道密码、Token 或 API 密钥。密码只用于换取 Token；Token 仅保存在本机 `~/.zentao-sidebar-config.json`，不会上传。
 
 ## 兼容性
 
@@ -53,19 +63,15 @@ node apps/cli/lib/bin.js web
 node apps/cli/lib/bin.js plugin --profile web remove @deepseek-ai/dsh-avcon-zentao
 ```
 
-移除 bundle 后，两条禅道运行时记录会一起消失。浏览器本地存储中可能仍保留用户主动保存的服务器和账户字段，但密码从不保存。
+移除 bundle 后，禅道运行时记录会一起消失。本地 `~/.zentao-sidebar-config.json` 中可能仍保留服务地址、账号和 Token，可手动删除。
 
 ## 仓库结构
 
 - `packages/bundle/avcon-zentao`：可安装的 profile bundle 与 Cordis patch；
-- `packages/host/zentao-cli-gateway`：仅限回环访问的 RPC 网关和 `zentao-cli` 子进程适配；
-- `packages/client/ui-zentao-notifications`：账户界面、连接状态、自动拉取、工作项卡片与拖拽载荷；
-- `overlay`：AVCON 视觉样式、输入框拖拽目标、响应式外壳集成和图片资源；
-- `scripts/install.mjs`：overlay 安装和 TypeScript project reference 登记脚本。
-
-## 验证结果
-
-代码已在所属 Harness 仓库中完成完整构建和 lint，28 项文档门禁全部通过，105 项 bundle／网关／客户端聚焦测试通过；隔离 profile 的安装、卸载和浏览器启动检查也已通过，控制台没有 warning 或 error。
+- `packages/host/zentao-cli-gateway`：仅限回环访问的 Host 网关，通过 REST API v2 拉取任务 / Bug / 需求并持久化登录态；
+- `packages/client/ui-zentao-notifications`：浏览器端悬浮工作台侧边栏；
+- `overlay/`：AVCON 深色 / 红色主题与响应式布局覆盖；
+- `scripts/install.mjs`：把三个 package 与 overlay 拷贝进 Harness 检出目录并更新 tsconfig。
 
 ## 许可证
 
