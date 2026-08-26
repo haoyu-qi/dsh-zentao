@@ -162,6 +162,7 @@ export function ZentaoSidebar({ rpc }: ZentaoSidebarProps) {
   const [autoRefresh, setAutoRefresh] = useState(0)
   const fetching = useRef(false)
   const toastTimer = useRef<number>()
+  const rootRef = useRef<HTMLDivElement>(null)
 
   const call = useCallback(async (endpoint: string, payload: unknown): Promise<unknown> => {
     const result = await rpc.call('/zentao', endpoint, payload)
@@ -212,6 +213,19 @@ export function ZentaoSidebar({ rpc }: ZentaoSidebarProps) {
     const timer = window.setInterval(() => { void refresh() }, autoRefresh * 1000)
     return () => { window.clearInterval(timer) }
   }, [autoRefresh, refresh])
+
+  useEffect(() => {
+    const onMouseDown = (event: MouseEvent): void => {
+      if (!open) return
+      const el = event.target
+      if (!(el instanceof Element)) return
+      if (rootRef.current !== null && rootRef.current.contains(el)) return
+      const isComposer = el.tagName === 'TEXTAREA' || (el instanceof HTMLElement && el.isContentEditable)
+      if (isComposer) setOpen(false)
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => { document.removeEventListener('mousedown', onMouseDown) }
+  }, [open])
 
   const openDetail = (type: Kind, item: ZentaoItem): void => {
     setView('detail')
@@ -408,7 +422,7 @@ export function ZentaoSidebar({ rpc }: ZentaoSidebarProps) {
   }
 
   return (
-    <div className={css.root}>
+    <div className={css.root} ref={rootRef}>
       {!open && <button className={css.fab} onClick={() => { setOpen(true) }}>禅道</button>}
       {open && (
         <div className={css.panel}>
