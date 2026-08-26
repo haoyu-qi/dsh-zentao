@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-Installable Web-profile bundle for the DSH shell customization and personal ZenTao CLI work center. One bundle layer mounts the loopback Host gateway and browser plugin together. The browser plugin activates the DSH dark/red palette, responsive shell decoration, company identity, ZenTao connection-state indicator, account login, automatic task/Bug retrieval, original links, and composer drag references. Removing the bundle removes both runtime rows and deactivates the bundle-scoped presentation.
+Installable Web-profile bundle for the DSH shell customization and floating ZenTao work center. One bundle layer mounts the loopback Host gateway and browser plugin together. The browser plugin activates the DSH dark/red palette, responsive shell decoration, ZenTao connection-state indicator, account login, automatic task/Bug/story retrieval, original links, and composer drag references. Removing the bundle removes both runtime rows and deactivates the bundle-scoped presentation.
 
 ## Install
 
