@@ -45,9 +45,9 @@ function loginPayload(value: unknown): LoginPayload {
   const server = row.server
   const account = row.account
   if (typeof server !== 'string' || typeof account !== 'string') throw new Error('服务器地址和账号均为必填项')
-  const password = typeof row.password === 'string' ? row.password : undefined
-  const token = typeof row.token === 'string' ? row.token : undefined
-  if (token === undefined && (password === undefined || password === '')) {
+  const password = typeof row.password === 'string' && row.password !== '' ? row.password : undefined
+  const token = typeof row.token === 'string' && row.token.trim() !== '' ? row.token : undefined
+  if (token === undefined && password === undefined) {
     throw new Error('需要提供密码或 Token')
   }
   const normalized = normalizeUrl(server)
