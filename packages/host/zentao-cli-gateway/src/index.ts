@@ -185,7 +185,7 @@ export function apply(ctx: Context): void {
     state.url = request.server
     state.account = request.account
     persist()
-    return await refresh(signal)
+    return { profile: { server: state.url, account: state.account }, tasks: [], bugs: [], stories: [], fetchedAt: new Date().toISOString() }
   }
 
   const doFetchMine = async (signal: AbortSignal): Promise<Snapshot> => {
