@@ -69,6 +69,10 @@ function lab(map: Record<string, string> | undefined, value: unknown): string {
   return map?.[String(value)] ?? String(value)
 }
 
+function str(value: unknown): string {
+  return value == null ? '' : String(value)
+}
+
 function itemUrl(url: string, type: Kind, id: unknown): string {
   if (url === '') return ''
   return `${url}/${type}-view-${String(id)}.html`
@@ -84,31 +88,31 @@ function describeItem(type: Kind, item: ZentaoItem): Field[] {
     if (item.estimate != null && item.estimate !== '') fields.push(['最初预计', item.estimate, 'h'])
     if (item.left != null && item.left !== '') fields.push(['预计剩余', item.left, 'h'])
     if (item.consumed != null && item.consumed !== '') fields.push(['总计消耗', item.consumed, 'h'])
-    fields.push(['截止日期', item.deadline])
-    fields.push(['指派给', item.assignedTo])
-    fields.push(['所属项目', item.project])
-    fields.push(['所属执行', item.execution])
+    fields.push(['截止日期', str(item.deadline)])
+    fields.push(['指派给', str(item.assignedTo)])
+    fields.push(['所属项目', str(item.project)])
+    fields.push(['所属执行', str(item.execution)])
     fields.push(['任务描述', stripHtml(item.desc)])
   } else if (type === 'bug') {
     fields.push(['状态', lab(STATUS.bug, item.status)])
     fields.push(['严重程度', lab(SEVERITY, item.severity)])
     fields.push(['优先级', lab(PRI, item.pri)])
-    fields.push(['指派给', item.assignedTo])
-    fields.push(['由谁创建', item.openedBy])
-    fields.push(['所属产品', item.product])
-    fields.push(['解决方案', item.resolution])
+    fields.push(['指派给', str(item.assignedTo)])
+    fields.push(['由谁创建', str(item.openedBy)])
+    fields.push(['所属产品', str(item.product)])
+    fields.push(['解决方案', str(item.resolution)])
     fields.push(['重现步骤', stripHtml(item.steps)])
   } else {
     fields.push(['状态', lab(STATUS.story, item.status)])
     fields.push(['优先级', lab(PRI, item.pri)])
-    fields.push(['所处阶段', item.stage])
+    fields.push(['所处阶段', str(item.stage)])
     if (item.estimate != null && item.estimate !== '') fields.push(['预计', item.estimate, 'h'])
-    fields.push(['指派给', item.assignedTo])
-    fields.push(['来源', item.source])
-    fields.push(['所属产品', item.product])
+    fields.push(['指派给', str(item.assignedTo)])
+    fields.push(['来源', str(item.source)])
+    fields.push(['所属产品', str(item.product)])
     fields.push(['需求描述', stripHtml(item.spec ?? item.desc)])
   }
-  return fields.filter(([, value]) => value != null && String(value).trim() !== '')
+  return fields.filter(([, value]) => value.trim() !== '')
 }
 
 function buildMarkdown(type: Kind, item: ZentaoItem, url: string): string {

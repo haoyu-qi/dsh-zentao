@@ -10,7 +10,7 @@ import type {} from '@deepseek-ai/dsh-subprocess'
 export const name = 'zentao-rest-gateway'
 export const inject = ['connection', 'subprocess']
 
-interface LoginPayload { server: string; account: string; password?: string; token?: string }
+interface LoginPayload { server: string; account: string; password: string | undefined; token: string | undefined }
 interface Profile { server: string; account: string }
 type Kind = 'task' | 'bug' | 'story'
 /** Raw ZenTao row plus its resolved kind; fields are kept verbatim for the client. */
@@ -95,7 +95,9 @@ async function runWithLimit<T>(items: T[], limit: number, worker: (item: T) => P
       const index = next
       next += 1
       if (index >= items.length) return
-      results[index] = await worker(items[index])
+      const item = items[index]
+      if (item === undefined) return
+      results[index] = await worker(item)
     }
   }
   const runners: Promise<void>[] = []
@@ -220,8 +222,10 @@ export function apply(ctx: Context): void {
     const bugs: unknown[] = []
     const stories: unknown[] = []
     for (let index = 0; index < jobs.length; index += 1) {
+      const job = jobs[index]
+      if (job === undefined) continue
       const rows = results[index] ?? []
-      const target = jobs[index].kind === 'task' ? tasks : jobs[index].kind === 'bug' ? bugs : stories
+      const target = job.kind === 'task' ? tasks : job.kind === 'bug' ? bugs : stories
       for (const row of rows) {
         if (object(row)?.assignedTo !== account) continue
         target.push(row)
@@ -257,12 +261,14 @@ export function apply(ctx: Context): void {
         const row = object(payload)
         const kind = row?.kind
         const id = row?.id
+        if (typeof kind !== 'string') return failure('未知类型')
         const map: Record<string, string> = { task: '/tasks', bug: '/bugs', story: '/stories' }
         const getter: Record<string, string> = { task: 'task', bug: 'bug', story: 'story' }
-        const base = typeof kind === 'string' ? map[kind] : undefined
-        if (base === undefined) return failure('未知类型')
+        const base = map[kind]
+        const key = getter[kind]
+        if (base === undefined || key === undefined) return failure('未知类型')
         const data = await httpGet(`${base}/${String(id)}`, signal)
-        const item = object(data)?.[getter[kind]] ?? data
+        const item = object(data)?.[key] ?? data
         return { ok: true, value: { item } }
       }
       if (endpoint === 'clearConfig') {

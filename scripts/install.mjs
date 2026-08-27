@@ -46,9 +46,40 @@ for (const packagePath of [
 
 copyTree(join(sourceRoot, 'overlay'), targetRoot)
 
+/** Strip `//` and `/* *​/` comments (not inside strings) so JSON5 tsconfig can parse as JSON. */
+function stripJsonComments(text) {
+  let out = ''
+  let inString = false
+  let inBlock = false
+  let inLine = false
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i]
+    const next = text[i + 1]
+    if (inBlock) {
+      if (ch === '*' && next === '/') { inBlock = false; i += 1 }
+      continue
+    }
+    if (inLine) {
+      if (ch === '\n') { inLine = false; out += '\n' }
+      continue
+    }
+    if (inString) {
+      out += ch
+      if (ch === '\\') { out += next; i += 1 }
+      else if (ch === '"') inString = false
+      continue
+    }
+    if (ch === '"') { inString = true; out += ch; continue }
+    if (ch === '/' && next === '/') { inLine = true; i += 1; continue }
+    if (ch === '/' && next === '*') { inBlock = true; i += 1; continue }
+    out += ch
+  }
+  return out
+}
+
 function updateJson(relativePath, update) {
   const path = join(targetRoot, relativePath)
-  const value = JSON.parse(readFileSync(path, 'utf8'))
+  const value = JSON.parse(stripJsonComments(readFileSync(path, 'utf8')))
   update(value)
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`)
 }
