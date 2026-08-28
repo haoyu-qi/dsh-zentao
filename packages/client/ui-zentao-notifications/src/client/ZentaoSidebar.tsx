@@ -32,7 +32,7 @@ interface ZentaoItem {
   [key: string]: unknown
 }
 
-interface Config { server: string; account: string; hasToken: boolean }
+interface Config { server: string; account: string; hasToken: boolean; role?: string }
 
 interface Snapshot {
   profile: { server: string; account: string }
@@ -42,7 +42,7 @@ interface Snapshot {
   fetchedAt: string
 }
 
-export type ZentaoSidebarProps = PropsRuntime<'shell.overlay'> & { rpc: ClientConnectionRpc }
+export type ZentaoSidebarProps = PropsRuntime<'shell.overlay'> & { rpc: ClientConnectionRpc; handlePrompt: (text: string) => Promise<void> }
 
 const TYPE_LABEL: Record<Kind, string> = { task: '任务', bug: 'BUG', story: '需求' }
 const STATUS: Record<Kind, Record<string, string>> = {
@@ -52,6 +52,25 @@ const STATUS: Record<Kind, Record<string, string>> = {
 }
 const PRI: Record<string, string> = { '1': 'P1 最高', '2': 'P2 高', '3': 'P3 中', '4': 'P4 低' }
 const SEVERITY: Record<string, string> = { '1': 'S1 致命', '2': 'S2 严重', '3': 'S3 一般', '4': 'S4 轻微' }
+
+type Role = 'product' | 'test' | 'dev' | 'manage'
+const ROLES: Array<{ key: Role; label: string }> = [
+  { key: 'product', label: '产品' },
+  { key: 'test', label: '测试' },
+  { key: 'dev', label: '开发' },
+  { key: 'manage', label: '管理' },
+]
+const ROLE_LABEL: Record<Role, string> = { product: '产品', test: '测试', dev: '开发', manage: '管理' }
+/** 四套角色预设提示词：按职位生成「快速处理」指令。 */
+const ROLE_INTRO: Record<Role, string> = {
+  product: '你是一名产品经理。请针对下面这条禅道条目做产品侧处理：梳理需求/问题背景、目标与验收标准，并给出拆分、优先级与关联方建议。',
+  test: '你是一名测试工程师。请针对下面这条禅道条目做测试侧处理：给出测试点、用例设计（含边界与异常）、回归范围与潜在风险。',
+  dev: '你是一名开发工程师。请针对下面这条禅道条目做开发侧处理：给出技术方案、改动点、影响面、风险与自测计划。',
+  manage: '你是一名研发管理者。请针对下面这条禅道条目做管理侧处理：给出优先级、排期、资源与风险判断，以及是否需要升级或协调。',
+}
+function roleOf(value: unknown): Role {
+  return value === 'product' || value === 'test' || value === 'dev' || value === 'manage' ? value : 'dev'
+}
 
 function stripHtml(value: unknown): string {
   if (value == null) return ''
@@ -150,7 +169,7 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 /** Render the account login, automatic refresh controls, and personal task/Bug/story lists. */
-export function ZentaoSidebar({ rpc }: ZentaoSidebarProps) {
+export function ZentaoSidebar({ rpc, handlePrompt }: ZentaoSidebarProps) {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<'list' | 'config' | 'detail'>('list')
   const [tab, setTab] = useState<Kind>('task')
@@ -160,7 +179,7 @@ export function ZentaoSidebar({ rpc }: ZentaoSidebarProps) {
   const [error, setError] = useState('')
   const [detail, setDetail] = useState<{ type: Kind; item: ZentaoItem; loading: boolean; error?: string }>()
   const [toast, setToast] = useState('')
-  const [form, setForm] = useState({ server: '', account: '', password: '', token: '' })
+  const [form, setForm] = useState({ server: '', account: '', password: '', token: '', role: 'dev' as Role })
   const [formMsg, setFormMsg] = useState('')
   const [saving, setSaving] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(0)
@@ -201,7 +220,7 @@ export function ZentaoSidebar({ rpc }: ZentaoSidebarProps) {
       try {
         const current = await call('getConfig', {}) as Config
         setConfig(current)
-        setForm({ server: current.server ?? '', account: current.account ?? '', password: '', token: '' })
+        setForm({ server: current.server ?? '', account: current.account ?? '', password: '', token: '', role: roleOf(current.role) })
       } catch {
         // No saved config; the login form drives configuration.
       }
@@ -258,14 +277,41 @@ export function ZentaoSidebar({ rpc }: ZentaoSidebarProps) {
     })
   }
 
+  const buildHandlePrompt = (type: Kind, item: ZentaoItem): string => {
+    const role = roleOf(config.role)
+    return `${ROLE_INTRO[role]}\n\n${buildMarkdown(type, item, config.server)}`
+  }
+
+  const doHandle = (type: Kind, item: ZentaoItem): void => {
+    const role = roleOf(config.role)
+    const prompt = buildHandlePrompt(type, item)
+    void handlePrompt(prompt).then(
+      () => {
+        setOpen(false)
+        showToast(`已按【${ROLE_LABEL[role]}】新建对话并执行`)
+      },
+      (reason) => {
+        void copyText(prompt).then(ok => {
+          showToast(ok ? `自动执行失败（${reason instanceof Error ? reason.message : String(reason)}），已复制提示词，可粘贴后发送` : '执行失败且复制失败，请手动复制')
+        })
+      },
+    )
+  }
+
+  const onHandleDragStart = (event: React.DragEvent<HTMLElement>, type: Kind, item: ZentaoItem): void => {
+    event.dataTransfer.effectAllowed = 'copy'
+    try { event.dataTransfer.setData('text/plain', buildHandlePrompt(type, item)) } catch {}
+    showToast(`按住拖到聊天输入框，按【${ROLE_LABEL[roleOf(config.role)]}】角色处理`)
+  }
+
   const submitConfig = (): void => {
     setSaving(true)
     setFormMsg('')
     void (async () => {
       try {
-        await call('login', { server: form.server, account: form.account, password: form.password, token: form.token })
+        await call('login', { server: form.server, account: form.account, password: form.password, token: form.token, role: form.role })
         setFormMsg('登录成功')
-        setConfig({ server: form.server, account: form.account, hasToken: true })
+        setConfig({ server: form.server, account: form.account, hasToken: true, role: form.role })
         setView('list')
       } catch (reason) {
         setFormMsg(reason instanceof Error ? reason.message : String(reason))
@@ -346,7 +392,10 @@ export function ZentaoSidebar({ rpc }: ZentaoSidebarProps) {
               <div className={css.cardMeta}>{badges(tab, item)}</div>
               <div className={css.cardFoot}>
                 <span className={css.dragHint}>⠿ 拖拽 · 点击详情</span>
-                <a className={css.link} href={itemUrl(config.server, tab, item.id)} target="_blank" rel="noreferrer" onClick={e => { e.stopPropagation() }}>原地址</a>
+                <div className={css.cardActions}>
+                  <button className={`${css.btn} ${css.handle}`} draggable onDragStart={e => { e.stopPropagation(); onHandleDragStart(e, tab, item) }} onClick={e => { e.stopPropagation(); doHandle(tab, item) }} title={`按【${ROLE_LABEL[roleOf(config.role)]}】角色生成处理提示词`}>处理</button>
+                  <a className={css.link} href={itemUrl(config.server, tab, item.id)} target="_blank" rel="noreferrer" onClick={e => { e.stopPropagation() }}>原地址</a>
+                </div>
               </div>
             </div>
           ))}
@@ -374,6 +423,7 @@ export function ZentaoSidebar({ rpc }: ZentaoSidebarProps) {
         <div className={css.actions}>
           <button className={`${css.btn} ${css.primary}`} draggable onDragStart={e => { onDragStart(e, type, item) }}>⣿ 拖拽到聊天框</button>
           <button className={css.btn} onClick={() => { doCopy(type, item) }}>复制内容</button>
+          <button className={`${css.btn} ${css.handle}`} draggable onDragStart={e => { onHandleDragStart(e, type, item) }} onClick={() => { doHandle(type, item) }}>按【{ROLE_LABEL[roleOf(config.role)]}】快速处理</button>
         </div>
         <div className={css.hint}>按住左侧按钮拖到聊天输入框，即可附带该{TYPE_LABEL[type]}内容进行提问；或点击「复制内容」后粘贴。</div>
         <div style={{ height: '16px' }} />
@@ -408,6 +458,12 @@ export function ZentaoSidebar({ rpc }: ZentaoSidebarProps) {
         <div className={css.formRow}>
           <label>或直接粘贴 Token（可选）</label>
           <input className={css.input} placeholder="已有 Token 可跳过密码" value={form.token} onChange={e => { setForm({ ...form, token: e.target.value }) }} />
+        </div>
+        <div className={css.formRow}>
+          <label>你的职位（决定「处理」按钮的预设提示词）</label>
+          <select className={css.select} style={{ width: '100%' }} value={form.role} onChange={e => { setForm({ ...form, role: e.target.value as Role }) }}>
+            {ROLES.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}
+          </select>
         </div>
         {formMsg !== '' && <div className={formMsg.includes('成功') || formMsg.includes('已') ? css.hint : css.error}>{formMsg}</div>}
         <div className={css.actions}>

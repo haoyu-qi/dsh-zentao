@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-Installable Web-profile bundle for the DSH shell customization and floating ZenTao work center. One bundle layer mounts the loopback Host gateway and browser plugin together. The browser plugin activates the DSH dark/red palette, responsive shell decoration, ZenTao connection-state indicator, account login, automatic task/Bug/story retrieval, original links, and composer drag references. Removing the bundle removes both runtime rows and deactivates the bundle-scoped presentation.
+Installable Web-profile bundle for the DSH shell customization and floating ZenTao work center. One bundle layer mounts the loopback Host gateway and browser plugin together. The browser plugin activates the DSH dark/red palette, responsive shell decoration, ZenTao connection-state indicator, account login (with a product/test/dev/management role choice), automatic task/Bug/story retrieval, original links, composer drag references, and a per-item **Handle** action that starts a fresh conversation in the current project and runs a role-preset prompt. Removing the bundle removes both runtime rows and deactivates the bundle-scoped presentation.
 
 ## Install
 
@@ -34,6 +34,10 @@ dsh plugin --profile web remove @haoyu-qi/dsh-zentao
 The profile reconciler removes the bundle layer. Saved server/account convenience fields may remain in browser-local storage; passwords are never stored.
 
 ## Model Experience
+
+The Host gateway also registers an agent-facing `zentao` tool, so the model can read your assigned ZenTao tasks/bugs/stories (action=mine, the default) or one item's detail (action=detail with kind + id) directly, reusing the same login as the sidebar. If the tool reports you are not logged in, log in from the sidebar first.
+
+Each task/bug/story row and detail view has a **Handle** button. Clicking it builds a prompt from your login-time role (product/test/dev/management, four preset prompt templates) plus the item, then opens a fresh conversation in the current project and sends that prompt automatically, so the model starts processing it right away. Drag-to-chat and copy remain available as fallbacks.
 
 Indirectly, through dsh-client-ui-zentao-notifications, which owns the draggable composer reference; the bundle itself is a patch-list carrier.
 

@@ -77,6 +77,9 @@
 .primary { background: #2563eb; border-color: #2563eb; color: #fff; font-weight: 600; }
 .primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
 
+.handle { background: #ea580c; border-color: #ea580c; color: #fff; font-weight: 600; white-space: nowrap; }
+.handle:hover { background: #c2410c; border-color: #c2410c; }
+
 .select {
   border: 1px solid var(--dsw-alias-border-l2, #d1d5db);
   background: var(--dsw-alias-bg-layer-2, #f3f4f6);
@@ -139,6 +142,8 @@
 .badgeDone { color: #16a34a; border-color: #86efac; }
 
 .cardFoot { display: flex; justify-content: space-between; align-items: center; margin-top: 7px; gap: 8px; }
+
+.cardActions { display: flex; gap: 8px; align-items: center; }
 
 .dragHint { font-size: 11px; color: var(--dsw-alias-label-secondary, #888); }
 

@@ -1,16 +1,18 @@
-/** Loopback RPC gateway from the Web shell to the ZenTao REST API v2. */
+/** Loopback RPC gateway from the Web shell to the ZenTao REST API v2, plus an
+ * agent-facing `zentao` tool that reuses the same login and fetch logic. */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
+import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { RpcResult } from '@deepseek-ai/dsh-host-apiproxy/api'
 import type {} from '@deepseek-ai/dsh-client-connection'
 import type {} from '@deepseek-ai/dsh-subprocess'
 
 export const name = 'zentao-rest-gateway'
-export const inject = ['connection', 'subprocess']
+export const inject = ['connection', 'subprocess', 'tools', 'systemPrompt']
 
-interface LoginPayload { server: string; account: string; password: string | undefined; token: string | undefined }
+interface LoginPayload { server: string; account: string; password: string | undefined; token: string | undefined; role: string | undefined }
 interface Profile { server: string; account: string }
 type Kind = 'task' | 'bug' | 'story'
 /** Raw ZenTao row plus its resolved kind; fields are kept verbatim for the client. */
@@ -19,6 +21,7 @@ interface Snapshot { profile: Profile; tasks: ZentaoItem[]; bugs: ZentaoItem[]; 
 
 const CONFIG_PATH = join(homedir(), '.zentao-sidebar-config.json')
 const OUTPUT_CAP = 2 * 1024 * 1024
+const MINE_ITEM_LIMIT = 20
 
 function failure(message: string): RpcResult<unknown> {
   return { ok: false, error: { code: 'internal', message, details: {} } }
@@ -47,12 +50,13 @@ function loginPayload(value: unknown): LoginPayload {
   if (typeof server !== 'string' || typeof account !== 'string') throw new Error('服务器地址和账号均为必填项')
   const password = typeof row.password === 'string' && row.password !== '' ? row.password : undefined
   const token = typeof row.token === 'string' && row.token.trim() !== '' ? row.token : undefined
+  const role = typeof row.role === 'string' && row.role.trim() !== '' ? row.role.trim() : undefined
   if (token === undefined && password === undefined) {
     throw new Error('需要提供密码或 Token')
   }
   const normalized = normalizeUrl(server)
   if (normalized === '') throw new Error('服务器地址格式不正确')
-  return { server: normalized, account: account.trim(), password, token }
+  return { server: normalized, account: account.trim(), password, token, role }
 }
 
 function respError(data: Record<string, unknown>): string | undefined {
@@ -107,22 +111,75 @@ async function runWithLimit<T>(items: T[], limit: number, worker: (item: T) => P
   return results
 }
 
-/** Register the loopback-only ZenTao REST RPC channel. */
+/** Strip a ZenTao rich-HTML field (e.g. steps) down to readable plain text. */
+function htmlToText(input: unknown): string {
+  if (typeof input !== 'string' || input.trim() === '') return ''
+  return input
+    .replace(/<img[^>]*>/gi, '')
+    .replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+function itemLabel(item: ZentaoItem): string {
+  const id = item.id ?? '?'
+  const title = typeof item.title === 'string' && item.title !== '' ? item.title : typeof item.name === 'string' ? item.name : '（无标题）'
+  const status = typeof item.status === 'string' && item.status !== '' ? ` [${item.status}]` : ''
+  const assignee = typeof item.assignedTo === 'string' && item.assignedTo !== '' ? ` @${item.assignedTo}` : ''
+  return `- #${id}${status} ${title}${assignee}`
+}
+
+/** Render the "assigned to me" snapshot as model-facing markdown. */
+function formatMine(snap: Snapshot): string {
+  const header = `禅道「指派给我」@ ${snap.fetchedAt}\nserver: ${snap.profile.server}  账号: ${snap.profile.account}\n`
+  const section = (title: string, items: ZentaoItem[]): string => {
+    if (items.length === 0) return `\n## ${title}（0）\n（无）\n`
+    const shown = items.slice(0, MINE_ITEM_LIMIT).map(itemLabel).join('\n')
+    const more = items.length > MINE_ITEM_LIMIT ? `\n… 共 ${items.length} 条，仅显示 ${MINE_ITEM_LIMIT} 条` : ''
+    return `\n## ${title}（${items.length}）\n${shown}${more}\n`
+  }
+  return header + section('任务', snap.tasks) + section('Bug', snap.bugs) + section('需求', snap.stories)
+}
+
+/** Render one task/bug/story detail as model-facing markdown. */
+function formatDetail(kind: string, item: Record<string, unknown>): string {
+  const id = item.id ?? '?'
+  const title = typeof item.title === 'string' && item.title !== '' ? item.title : typeof item.name === 'string' ? item.name : '（无标题）'
+  const status = typeof item.status === 'string' ? item.status : ''
+  const assignedTo = typeof item.assignedTo === 'string' ? item.assignedTo : ''
+  const openedBy = typeof item.openedBy === 'string' ? item.openedBy : ''
+  const header = `禅道 ${kind} #${id}\n标题：${title}\n状态：${status}\n`
+  const meta = [assignedTo !== '' ? `指派给：${assignedTo}` : '', openedBy !== '' ? `创建人：${openedBy}` : '']
+    .filter(Boolean)
+    .join('\n')
+  const steps = htmlToText(item.steps ?? item.desc)
+  return header + (meta !== '' ? `${meta}\n` : '') + (steps !== '' ? `\n描述/重现步骤：\n${steps}\n` : '')
+}
+
+/** Register the loopback ZenTao REST RPC channel and the agent-facing `zentao` tool. */
 export function apply(ctx: Context): void {
-  const state = { url: '', account: '', token: '' }
+  const state = { url: '', account: '', token: '', role: '' }
 
   try {
     const cfg = JSON.parse(readFileSync(CONFIG_PATH, 'utf8')) as Record<string, unknown>
     if (typeof cfg.url === 'string') state.url = cfg.url
     if (typeof cfg.account === 'string') state.account = cfg.account
     if (typeof cfg.token === 'string') state.token = cfg.token
+    if (typeof cfg.role === 'string') state.role = cfg.role
   } catch {
     // First run or malformed config; the client drives login.
   }
 
   const persist = (): void => {
     try {
-      writeFileSync(CONFIG_PATH, JSON.stringify({ url: state.url, account: state.account, token: state.token }))
+      writeFileSync(CONFIG_PATH, JSON.stringify({ url: state.url, account: state.account, token: state.token, role: state.role }))
     } catch {
       // Local persistence is best-effort; a failed write must not break login.
     }
@@ -184,6 +241,7 @@ export function apply(ctx: Context): void {
     }
     state.url = request.server
     state.account = request.account
+    if (request.role !== undefined) state.role = request.role
     persist()
     return { profile: { server: state.url, account: state.account }, tasks: [], bugs: [], stories: [], fetchedAt: new Date().toISOString() }
   }
@@ -246,10 +304,21 @@ export function apply(ctx: Context): void {
     return await doFetchMine(signal)
   }
 
+  const fetchDetail = async (kind: string, id: string, signal: AbortSignal): Promise<{ kind: string; item: Record<string, unknown> }> => {
+    const map: Record<string, string> = { task: '/tasks', bug: '/bugs', story: '/stories' }
+    const getter: Record<string, string> = { task: 'task', bug: 'bug', story: 'story' }
+    const base = map[kind]
+    const key = getter[kind]
+    if (base === undefined || key === undefined) throw new Error(`未知类型：${kind}（支持 task | bug | story）`)
+    const data = await httpGet(`${base}/${String(id)}`, signal)
+    const item = object(data)?.[key] ?? data
+    return { kind, item: object(item) ?? {} }
+  }
+
   ctx.effect(() => ctx.connection.rpc.handle('/zentao', async (endpoint, payload, signal) => {
     try {
       if (endpoint === 'getConfig') {
-        return { ok: true, value: { server: state.url, account: state.account, hasToken: state.token !== '' } }
+        return { ok: true, value: { server: state.url, account: state.account, hasToken: state.token !== '', role: state.role } }
       }
       if (endpoint === 'login') {
         return { ok: true, value: await doLogin(loginPayload(payload), signal) }
@@ -261,21 +330,15 @@ export function apply(ctx: Context): void {
         const row = object(payload)
         const kind = row?.kind
         const id = row?.id
-        if (typeof kind !== 'string') return failure('未知类型')
-        const map: Record<string, string> = { task: '/tasks', bug: '/bugs', story: '/stories' }
-        const getter: Record<string, string> = { task: 'task', bug: 'bug', story: 'story' }
-        const base = map[kind]
-        const key = getter[kind]
-        if (base === undefined || key === undefined) return failure('未知类型')
-        const data = await httpGet(`${base}/${String(id)}`, signal)
-        const item = object(data)?.[key] ?? data
-        return { ok: true, value: { item } }
+        if (typeof kind !== 'string' || typeof id !== 'string') return failure('缺少 kind 或 id')
+        return { ok: true, value: await fetchDetail(kind, id, signal) }
       }
       if (endpoint === 'clearConfig') {
         state.url = ''
         state.account = ''
         state.token = ''
-        try { writeFileSync(CONFIG_PATH, JSON.stringify({ url: '', account: '', token: '' })) } catch {}
+        state.role = ''
+        try { writeFileSync(CONFIG_PATH, JSON.stringify({ url: '', account: '', token: '', role: '' })) } catch {}
         return { ok: true, value: null }
       }
       return failure(`未知禅道操作：${endpoint}`)
@@ -283,4 +346,62 @@ export function apply(ctx: Context): void {
       return failure(error instanceof Error ? error.message : String(error))
     }
   }, { authority: 'loopback' }))
+
+  // Agent-facing tool: lets the LLM read ZenTao directly, reusing the same login
+  // state as the sidebar (`~/.zentao-sidebar-config.json`).
+  ctx.systemPrompt.section({
+    name: 'tool:zentao',
+    order: 103,
+    text: 'Use the zentao tool (action=mine, the default) to list the tasks, bugs and stories assigned to you; use action=detail with kind (task|bug|story) and id to read one item. The login comes from the ZenTao sidebar, so log in there first if the tool reports you are not logged in.',
+  })
+  ctx.tools.register(defineTool({
+    name: 'zentao',
+    description: "List the ZenTao tasks/bugs/stories assigned to you, or read one item's detail, through the saved ZenTao login.",
+    parameters: {
+      action: {
+        type: 'string',
+        description: "What to fetch: 'mine' (default) lists your assigned tasks/bugs/stories; 'detail' reads one task/bug/story.",
+      },
+      kind: {
+        type: 'string',
+        description: 'Only with action=detail: the item type (task | bug | story).',
+      },
+      id: {
+        type: 'string',
+        description: 'Only with action=detail: the item id.',
+      },
+    },
+    output: {
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          content: { type: 'string', required: true },
+        },
+      },
+      render: (args, value) => [{ type: 'text', text: value.content }],
+    },
+    async execute(args, exec) {
+      if (state.token === '') {
+        return {
+          content: '未登录禅道。请先在右侧「禅道」侧边栏登录（server / 账号 / Token），或在本机 ~/.zentao-sidebar-config.json 写入 {"url":"...","account":"...","token":"..."} 后重试。',
+        }
+      }
+      const action = args.action ?? 'mine'
+      if (action === 'mine') {
+        const snap = await refresh(exec.signal)
+        return { content: formatMine(snap) }
+      }
+      if (action === 'detail') {
+        const kind = args.kind
+        const id = args.id
+        if (typeof kind !== 'string' || typeof id !== 'string') {
+          return { content: 'action=detail 需要同时提供 kind（task|bug|story）和 id。' }
+        }
+        const detail = await fetchDetail(kind, id, exec.signal)
+        return { content: formatDetail(detail.kind, detail.item) }
+      }
+      return { content: `未知 action：${action}（支持 mine / detail）` }
+    },
+  }))
 }
