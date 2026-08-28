@@ -30,7 +30,16 @@
 
 ## 兼容性
 
-当前 overlay 针对 DeepSeek Harness `0.1.0-rc.5` 包版本。安装器会拒绝非 DeepSeek Harness 目录。对其他版本使用前，请先检查上游界面文件是否发生变化。
+当前 npm 包基于 DeepSeek Harness `0.1.1-rc.2` 构建；可选的 `overlay/` 界面覆盖仍针对 `0.1.0-rc.5`。安装器会拒绝非 DeepSeek Harness 目录。对其他版本应用 overlay 前，请先检查上游界面文件是否发生变化。
+
+## 从 npm 安装
+
+```sh
+dsh plugin --profile web add @haoyu-qi/dsh-zentao
+dsh web
+```
+
+组合包会安装 `@haoyu-qi/dsh-host-zentao-cli-gateway` 与 `@haoyu-qi/dsh-client-ui-zentao-notifications` 两个运行时依赖；Web profile 需要已经包含官方的 `@deepseek-ai/dsh-web-app`。
 
 ## 从源码安装
 
@@ -55,12 +64,12 @@ node apps/cli/lib/bin.js plugin --profile web add \
 node apps/cli/lib/bin.js web
 ```
 
-源码安装时需要在一条命令中列出三个本地路径，因为包管理器的 link 不会把被链接 workspace 包的依赖安装到目标 profile。只有 `@deepseek-ai/dsh-zentao` 声明了 `dsh.bundle`，所以 profile 实际只会启用一个 bundle。
+源码安装时需要在一条命令中列出三个本地路径，因为包管理器的 link 不会把被链接 workspace 包的依赖安装到目标 profile。只有 `@haoyu-qi/dsh-zentao` 声明了 `dsh.bundle`，所以 profile 实际只会启用一个 bundle。
 
 ## 卸载
 
 ```sh
-node apps/cli/lib/bin.js plugin --profile web remove @deepseek-ai/dsh-zentao
+node apps/cli/lib/bin.js plugin --profile web remove @haoyu-qi/dsh-zentao
 ```
 
 移除 bundle 后，禅道运行时记录会一起消失。本地 `~/.zentao-sidebar-config.json` 中可能仍保留服务地址、账号和 Token，可手动删除。
@@ -72,6 +81,22 @@ node apps/cli/lib/bin.js plugin --profile web remove @deepseek-ai/dsh-zentao
 - `packages/client/ui-zentao-notifications`：浏览器端悬浮工作台侧边栏；
 - `overlay/`：DSH 深色 / 红色主题与响应式布局覆盖；
 - `scripts/install.mjs`：把三个 package 与 overlay 拷贝进 Harness 检出目录并更新 tsconfig。
+
+## 发布
+
+在 DeepSeek Harness `dsh-v0.1.1-rc.2` 检出目录中只安装插件包并构建，然后把发布白名单中的 `lib/` 文件同步回来：
+
+```sh
+node scripts/install.mjs /你的/deepseek-harness/绝对路径 --packages-only
+cd /你的/deepseek-harness/绝对路径
+pnpm install --no-frozen-lockfile
+pnpm run build:lib
+cd /本仓库/绝对路径
+npm run sync:built -- /你的/deepseek-harness/绝对路径
+npm run check:release
+```
+
+发布顺序必须是 Host gateway、Client UI、最后是 bundle，确保公开 bundle 出现时两个依赖已经可下载。
 
 ## 许可证
 

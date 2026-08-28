@@ -2,7 +2,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
-const PACKAGE_NAME = '@deepseek-ai/dsh-host-zentao-cli-gateway'
+const PACKAGE_NAME = '@haoyu-qi/dsh-host-zentao-cli-gateway'
 
 /** Cordis companion plugin name. */
 export const name = 'host-zentao-cli-gateway-invariant'

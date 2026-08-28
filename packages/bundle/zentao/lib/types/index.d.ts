@@ -4,5 +4,5 @@
  * carries no runtime API.
  * @module @haoyu-qi/dsh-zentao
  */
-
-export {}
+export {};
+//# sourceMappingURL=index.d.ts.map

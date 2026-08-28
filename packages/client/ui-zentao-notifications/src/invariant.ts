@@ -4,7 +4,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 
-const PACKAGE_NAME = '@deepseek-ai/dsh-client-ui-zentao-notifications'
+const PACKAGE_NAME = '@haoyu-qi/dsh-client-ui-zentao-notifications'
 
 /** Cordis companion plugin name. */
 export const name = 'client-ui-zentao-notifications-invariant'

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-host-zentao-cli-gateway",
+  "name": "@haoyu-qi/dsh-host-zentao-cli-gateway",
   "description": "Loopback Web gateway for personal ZenTao tasks, bugs and stories through the ZenTao REST API v2",
   "version": "0.1.0-rc.5",
   "publishConfig": { "access": "public" },
@@ -14,21 +14,20 @@
   "exports": {
     ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
     "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
-    "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "files": ["lib/index.js", "lib/invariant.js", "lib/types/**/*.d.ts"],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@deepseek-ai/dsh-client-connection": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-subprocess": "^0.1.1-rc.2",
+    "@deepseek-ai/cordis": "^4.0.1"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-client-connection": "workspace:^",
-    "@deepseek-ai/dsh-invariants": "workspace:^",
-    "@deepseek-ai/dsh-subprocess": "workspace:^",
-    "@deepseek-ai/cordis": "workspace:^"
+    "@deepseek-ai/dsh-client-connection": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-subprocess": "^0.1.1-rc.2",
+    "@deepseek-ai/cordis": "^4.0.1"
   }
 }

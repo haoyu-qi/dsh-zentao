@@ -1,4 +1,4 @@
-# @deepseek-ai/dsh-client-ui-zentao-notifications
+# @haoyu-qi/dsh-client-ui-zentao-notifications
 
 [English](README.md) | 中文
 

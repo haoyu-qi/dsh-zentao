@@ -11,9 +11,10 @@ import { fileURLToPath } from 'node:url'
 
 const sourceRoot = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const targetRoot = resolve(process.argv[2] ?? '')
+const packagesOnly = process.argv.includes('--packages-only')
 
 if (process.argv[2] === undefined) {
-  throw new Error('Usage: node scripts/install.mjs /absolute/path/to/deepseek-harness')
+  throw new Error('Usage: node scripts/install.mjs /absolute/path/to/deepseek-harness [--packages-only]')
 }
 
 const targetManifestPath = join(targetRoot, 'package.json')
@@ -44,7 +45,7 @@ for (const packagePath of [
   copyTree(join(sourceRoot, packagePath), join(targetRoot, packagePath))
 }
 
-copyTree(join(sourceRoot, 'overlay'), targetRoot)
+if (!packagesOnly) copyTree(join(sourceRoot, 'overlay'), targetRoot)
 
 /** Strip `//` and `/* *​/` comments (not inside strings) so JSON5 tsconfig can parse as JSON. */
 function stripJsonComments(text) {
@@ -91,8 +92,8 @@ function addReference(references, path) {
 updateJson('tsconfig.base.json', config => {
   const paths = config.compilerOptions?.paths
   if (paths === undefined) throw new Error('tsconfig.base.json has no compilerOptions.paths')
-  paths['@deepseek-ai/dsh-host-zentao-cli-gateway'] = ['./packages/host/zentao-cli-gateway/src']
-  paths['@deepseek-ai/dsh-client-ui-zentao-notifications'] = ['./packages/client/ui-zentao-notifications/src']
+  paths['@haoyu-qi/dsh-host-zentao-cli-gateway'] = ['./packages/host/zentao-cli-gateway/src']
+  paths['@haoyu-qi/dsh-client-ui-zentao-notifications'] = ['./packages/client/ui-zentao-notifications/src']
 })
 
 updateJson('tsconfig.client.json', config => {
@@ -106,5 +107,5 @@ updateJson('tsconfig.host.json', config => {
   addReference(config.references, './packages/host/zentao-cli-gateway')
 })
 
-console.log(`Installed DSH-ZENTAO sources into ${targetRoot}`)
+console.log(`Installed DSH-ZENTAO ${packagesOnly ? 'packages' : 'sources'} into ${targetRoot}`)
 console.log('Next: pnpm install && pnpm run build')

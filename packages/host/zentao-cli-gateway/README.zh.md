@@ -1,4 +1,4 @@
-# @deepseek-ai/dsh-host-zentao-cli-gateway
+# @haoyu-qi/dsh-host-zentao-cli-gateway
 
 [English](README.md) | 中文
 

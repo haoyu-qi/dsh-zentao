@@ -4,7 +4,7 @@
 
 - insert:
     - id: zentao-cli-gateway
-      name: '@deepseek-ai/dsh-host-zentao-cli-gateway'
+      name: '@haoyu-qi/dsh-host-zentao-cli-gateway'
 
     - id: ui-zentao-notifications
-      name: '@deepseek-ai/dsh-client-ui-zentao-notifications'
+      name: '@haoyu-qi/dsh-client-ui-zentao-notifications'

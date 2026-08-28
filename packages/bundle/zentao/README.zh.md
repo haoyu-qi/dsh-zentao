@@ -1,4 +1,4 @@
-# @deepseek-ai/dsh-zentao
+# @haoyu-qi/dsh-zentao
 
 [English](README.md) | 中文
 
@@ -19,23 +19,23 @@ node apps/cli/lib/bin.js web
 发布后可直接使用包名安装：
 
 ```sh
-dsh plugin --profile web add @deepseek-ai/dsh-zentao
+dsh plugin --profile web add @haoyu-qi/dsh-zentao
 dsh web
 ```
 
-使用已发布包名的命令会把组合包及其两个运行时依赖安装到 profile，并将 `@deepseek-ai/dsh-zentao` 追加到 `dsh.profile.bundles`。Web profile 必须已经包含 `@deepseek-ai/dsh-web-app`，因为本组合包是在该界面上追加浏览器与 Host 条目。
+使用已发布包名的命令会把组合包及其两个运行时依赖安装到 profile，并将 `@haoyu-qi/dsh-zentao` 追加到 `dsh.profile.bundles`。Web profile 必须已经包含 `@deepseek-ai/dsh-web-app`，因为本组合包是在该界面上追加浏览器与 Host 条目。
 
 ## 移除
 
 ```sh
-dsh plugin --profile web remove @deepseek-ai/dsh-zentao
+dsh plugin --profile web remove @haoyu-qi/dsh-zentao
 ```
 
 profile 协调器会移除该 bundle 层。浏览器本地存储中可能仍保留服务器／账号便捷字段；密码始终不会保存。
 
 ## 模型体验
 
-间接影响来自 `@deepseek-ai/dsh-client-ui-zentao-notifications` 所拥有的输入框拖拽引用；组合包自身仅承载 patch 列表。
+间接影响来自 `@haoyu-qi/dsh-client-ui-zentao-notifications` 所拥有的输入框拖拽引用；组合包自身仅承载 patch 列表。
 
 #### KV Cache 影响
 

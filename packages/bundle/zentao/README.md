@@ -1,4 +1,4 @@
-# @deepseek-ai/dsh-zentao
+# @haoyu-qi/dsh-zentao
 
 English | [中文](README.zh.md)
 
@@ -19,16 +19,16 @@ The source-checkout command lists the two local runtime package paths because a 
 After publication, the profile command accepts the package name directly:
 
 ```sh
-dsh plugin --profile web add @deepseek-ai/dsh-zentao
+dsh plugin --profile web add @haoyu-qi/dsh-zentao
 dsh web
 ```
 
-The published-package command installs the bundle and its two runtime dependencies into the profile, then appends `@deepseek-ai/dsh-zentao` to `dsh.profile.bundles`. The Web profile must already include `@deepseek-ai/dsh-web-app`, because the bundle adds browser and Host rows to that surface.
+The published-package command installs the bundle and its two runtime dependencies into the profile, then appends `@haoyu-qi/dsh-zentao` to `dsh.profile.bundles`. The Web profile must already include `@deepseek-ai/dsh-web-app`, because the bundle adds browser and Host rows to that surface.
 
 ## Remove
 
 ```sh
-dsh plugin --profile web remove @deepseek-ai/dsh-zentao
+dsh plugin --profile web remove @haoyu-qi/dsh-zentao
 ```
 
 The profile reconciler removes the bundle layer. Saved server/account convenience fields may remain in browser-local storage; passwords are never stored.
