@@ -1,7 +1,7 @@
 {
   "name": "@haoyu-qi/dsh-client-ui-zentao-notifications",
   "description": "Floating ZenTao work center (tasks, bugs and stories) for the Web shell",
-  "version": "0.1.0-rc.6",
+  "version": "0.1.0-rc.8",
   "publishConfig": {
     "access": "public"
   },

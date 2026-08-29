@@ -379,7 +379,7 @@ export function apply(ctx: Context): void {
           content: { type: 'string', required: true },
         },
       },
-      render: (args, value) => [{ type: 'text', text: value.content }],
+      render: (_args, value) => [{ type: 'text', text: value.content }],
     },
     async execute(args, exec) {
       if (state.token === '') {

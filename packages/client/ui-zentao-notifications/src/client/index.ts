@@ -7,7 +7,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import { ZentaoSidebar } from './ZentaoSidebar.tsx'
 
 /** Services required by the ZenTao sidebar plugin. */
-export const inject = ['slots', 'connection']
+export const inject = ['slots', 'connection', 'sessions', 'workspaces']
 
 /** Minimal conversation face we need: scope-addressed prompt send. */
 interface ConversationSend { send: (text: string) => Promise<unknown> }

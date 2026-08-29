@@ -1,7 +1,7 @@
 {
   "name": "@haoyu-qi/dsh-host-zentao-cli-gateway",
   "description": "Loopback Web gateway for personal ZenTao tasks, bugs and stories through the ZenTao REST API v2",
-  "version": "0.1.0-rc.6",
+  "version": "0.1.0-rc.8",
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",
