@@ -13,6 +13,9 @@ A floating ZenTao work center for [DeepSeek Harness](https://github.com/deepseek
 - Drag a card (or the 「拖拽到聊天框」 button) into the chat input to insert an editable Markdown reference.
 - Selectable auto-refresh interval (30 s / 1 min / 5 min / 10 min / 30 min / off).
 - The login state (server, account, Token) persists to `~/.zentao-sidebar-config.json` and is restored after updates or restarts.
+- A product/test/dev/management role choice at login with four preset prompts.
+- A per-item **Handle** action that opens a fresh conversation in the current project and auto-sends a role-preset prompt.
+- An agent-facing `zentao` tool so the model can read your assigned items or one item's detail directly.
 - DSH dark / red themes through the `overlay/` tree.
 
 ## How it works
@@ -25,6 +28,7 @@ The plugin talks to the **ZenTao RESTful API v2** directly (no `zentao-cli` depe
   - Bugs: `/products/{id}/bugs?browseType=assigntome` (ZenTao's spelling variant for bugs)
   - Tasks: `/executions/{id}/tasks?browseType=unclosed` filtered by `assignedTo`
 - The Host gateway runs `curl` subprocesses and raises the stdout cap to 2 MB so large task lists are not truncated by the 64 KB default.
+- The Host gateway also registers an agent-facing `zentao` tool (`action=mine` lists the assigned tasks/bugs/stories by default; `action=detail` with `kind` + `id` reads one item), reusing the sidebar's login state.
 
 No ZenTao passwords, Tokens, or API keys are committed to this repository. The password is used only to obtain a Token; the Token is stored only in `~/.zentao-sidebar-config.json` on the local machine and is never uploaded.
 
@@ -34,12 +38,22 @@ The npm packages are built against DeepSeek Harness `0.1.1-rc.2`; the optional `
 
 ## Install from npm
 
+Prerequisites: [Node.js](https://nodejs.org/), `pnpm` (the `dsh plugin` command forwards to pnpm), and the DeepSeek Harness `dsh` command. `dsh` is not a standalone npm package — it is the command shipped by `@deepseek-ai/dsh`. Install it globally to use `dsh` directly:
+
 ```sh
+npm install -g pnpm @deepseek-ai/dsh
 dsh plugin --profile web add @haoyu-qi/dsh-zentao
 dsh web
 ```
 
-The bundle installs `@haoyu-qi/dsh-host-zentao-cli-gateway` and `@haoyu-qi/dsh-client-ui-zentao-notifications` as runtime dependencies. The Web profile must already include the official `@deepseek-ai/dsh-web-app` package.
+To avoid a global install, replace `dsh` with `npx @deepseek-ai/dsh` (do not use `npx dsh`, which is not an executable package):
+
+```sh
+npx @deepseek-ai/dsh plugin --profile web add @haoyu-qi/dsh-zentao
+npx @deepseek-ai/dsh web
+```
+
+The bundle installs `@haoyu-qi/dsh-host-zentao-cli-gateway` and `@haoyu-qi/dsh-client-ui-zentao-notifications` as runtime dependencies. The `web` profile auto-initializes on first use, and its template already includes the official `@deepseek-ai/dsh-web-app` package.
 
 ## Install from source
 

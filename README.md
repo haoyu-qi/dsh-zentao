@@ -13,6 +13,9 @@
 - 拖拽卡片（或「拖拽到聊天框」按钮）到对话输入框，自动插入可编辑的 Markdown 引用；
 - 自动刷新间隔可选（30 秒 / 1 分 / 5 分 / 10 分 / 30 分 / 关闭）；
 - 登录态（服务地址、账号、Token）持久化到本地 `~/.zentao-sidebar-config.json`，更新或重启后自动恢复；
+- 登录时可选择职位（产品 / 测试 / 开发 / 管理），并预置四套角色提示词；
+- 每条任务 / Bug / 需求（列表卡片与详情页）都带「处理」按钮，一键在当前项目新建对话并按角色预设提示词自动发出；
+- Host 网关注册面向 agent 的 `zentao` 工具，模型可直接读取「指派给我」的数据或单条详情；
 - DSH 深色 / 红色主题（通过 `overlay/` 覆盖上层界面样式）。
 
 ## 实现说明
@@ -24,7 +27,8 @@
   - 需求：`/products/{id}/stories?browseType=assignedtome`
   - Bug：`/products/{id}/bugs?browseType=assigntome`（禅道 Bug 的拼写变体）
   - 任务：`/executions/{id}/tasks?browseType=unclosed` + 按 `assignedTo` 过滤
-- Host 网关通过 `curl` 子进程发起请求，并把 stdout 上限提高到 2MB，避免任务列表响应被 64KB 默认上限截断。
+- Host 网关通过 `curl` 子进程发起请求，并把 stdout 上限提高到 2MB，避免任务列表响应被 64KB 默认上限截断；
+- Host 网关还注册一个面向 agent 的 `zentao` 工具（`action=mine` 默认列出「指派给我」的任务 / Bug / 需求，`action=detail` + `kind` + `id` 读取单条详情），复用侧边栏的登录态。
 
 仓库不包含任何禅道密码、Token 或 API 密钥。密码只用于换取 Token；Token 仅保存在本机 `~/.zentao-sidebar-config.json`，不会上传。
 
@@ -34,12 +38,22 @@
 
 ## 从 npm 安装
 
+前置条件：已安装 [Node.js](https://nodejs.org/)、`pnpm`（`dsh plugin` 会转发给 pnpm）以及 DeepSeek Harness 的 `dsh` 命令。`dsh` 不是独立的 npm 包，而是包 `@deepseek-ai/dsh` 提供的命令；可全局安装后直接使用 `dsh`：
+
 ```sh
+npm install -g pnpm @deepseek-ai/dsh
 dsh plugin --profile web add @haoyu-qi/dsh-zentao
 dsh web
 ```
 
-组合包会安装 `@haoyu-qi/dsh-host-zentao-cli-gateway` 与 `@haoyu-qi/dsh-client-ui-zentao-notifications` 两个运行时依赖；Web profile 需要已经包含官方的 `@deepseek-ai/dsh-web-app`。
+如果不想全局安装，直接用 `npx @deepseek-ai/dsh` 代替上面的 `dsh`（不要用 `npx dsh`，那不是一个可执行的包）：
+
+```sh
+npx @deepseek-ai/dsh plugin --profile web add @haoyu-qi/dsh-zentao
+npx @deepseek-ai/dsh web
+```
+
+组合包会安装 `@haoyu-qi/dsh-host-zentao-cli-gateway` 与 `@haoyu-qi/dsh-client-ui-zentao-notifications` 两个运行时依赖；`web` profile 首次使用时会自动初始化，其模板已包含官方的 `@deepseek-ai/dsh-web-app`。
 
 ## 从源码安装
 
