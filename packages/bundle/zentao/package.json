@@ -1,7 +1,7 @@
 {
   "name": "@haoyu-qi/dsh-zentao",
   "description": "Installable DSH Web customization and personal ZenTao floating work-center bundle",
-  "version": "0.1.0-rc.8",
+  "version": "0.1.0-rc.9",
   "publishConfig": {
     "access": "public"
   },
@@ -38,15 +38,15 @@
     }
   },
   "dependencies": {
-    "@haoyu-qi/dsh-client-ui-zentao-notifications": "^0.1.0-rc.8",
-    "@haoyu-qi/dsh-host-zentao-cli-gateway": "^0.1.0-rc.8"
+    "@haoyu-qi/dsh-client-ui-zentao-notifications": "^0.1.0-rc.9",
+    "@haoyu-qi/dsh-host-zentao-cli-gateway": "^0.1.0-rc.9"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-invariants": "^0.2.0-rc.2",
     "@deepseek-ai/cordis": "^4.0.1"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-invariants": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-invariants": "^0.2.0-rc.2",
     "@deepseek-ai/cordis": "^4.0.1"
   }
 }

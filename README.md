@@ -34,7 +34,11 @@
 
 ## 兼容性
 
-当前 npm 包基于 DeepSeek Harness `0.1.1-rc.2` 构建；可选的 `overlay/` 界面覆盖仍针对 `0.1.0-rc.5`。安装器会拒绝非 DeepSeek Harness 目录。对其他版本应用 overlay 前，请先检查上游界面文件是否发生变化。
+当前 npm 包基于 DeepSeek Harness `0.2.0-rc.2` 构建（`peerDependencies` 为 `^0.2.0-rc.2`）。DSH 在安装与启动时会把插件的 `@deepseek-ai/dsh*` peer 范围与运行时版本逐一比对（`semver.satisfies(runtime, range, { includePrerelease: true })`），任何不满足的范围都会让安装被整体拒绝，或让该 bundle 在启动时被拒绝加载 —— 因此**不要**把范围改回 `^0.1.x`。
+
+`@deepseek-ai/dsh-client-runtime` 在 DSH `0.2.0-rc.2` 中已不存在（该版本既未发布 0.2.x，也不在应用 bundle 的依赖里），客户端插件改为直接使用 cordis 服务名注入（`slots` / `connection` / `sessions` / `workspaces` / `uiWorkspace`）。
+
+`overlay/` 界面覆盖**不适用于** `0.2.0-rc.2`，且它是对 DSH 源码检出做整文件覆盖（不是补丁）。在 `0.2.0-rc.2` 上至少 4 个被替换的文件已失效：`AppFrame.tsx` 引用了已删除的 `SIDEBAR_DEFAULT` 并驱动已改名的 slot、`base.css` 引用了不存在的 `@deepseek-ai/dsh-client-ui-theme/styles/*` 导出子路径、`InputBar.tsx` 引用了已删除的 `Icon*Outline16` 图标、`slot-catalog.ts` 是把生成产物回退成旧版。除非另行适配，请勿应用 overlay。
 
 ## 从 npm 安装
 
