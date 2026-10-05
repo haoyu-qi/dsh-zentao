@@ -3,14 +3,22 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { RpcResult } from '@deepseek-ai/dsh-host-apiproxy/api'
 import type {} from '@deepseek-ai/dsh-client-connection'
+import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-subprocess'
 
+/** Connection RPC result envelope; the 0.2.x runtime names this type ConnectionRpcResult. */
+type RpcResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; error: { code: string; message: string; details: Record<string, unknown> } }
+
 export const name = 'zentao-rest-gateway'
-export const inject = ['connection', 'subprocess', 'tools', 'systemPrompt']
+// The channel is registered directly on `webServer` (see below), and its requests are
+// fenced with `connection.requestRejection`, so both services are injected.
+export const inject = ['webServer', 'connection', 'subprocess', 'tools', 'systemPrompt']
 
 interface LoginPayload { server: string; account: string; password: string | undefined; token: string | undefined; role: string | undefined }
 interface Profile { server: string; account: string }
@@ -315,7 +323,7 @@ export function apply(ctx: Context): void {
     return { kind, item: object(item) ?? {} }
   }
 
-  ctx.effect(() => ctx.connection.rpc.handle('/zentao', async (endpoint, payload, signal) => {
+  const handleRpc = async (endpoint: string, payload: unknown, signal: AbortSignal): Promise<RpcResult<unknown>> => {
     try {
       if (endpoint === 'getConfig') {
         return { ok: true, value: { server: state.url, account: state.account, hasToken: state.token !== '', role: state.role } }
@@ -345,7 +353,80 @@ export function apply(ctx: Context): void {
     } catch (error) {
       return failure(error instanceof Error ? error.message : String(error))
     }
-  }, { authority: 'loopback' }))
+  }
+
+  // `connection.rpc.handle` is unusable on DSH 0.2.x: it registers through
+  // `owner.effect(() => owner.webServer.register(...))` where `owner` resolves to a
+  // context without `webServer` injected, so it throws. First-party 0.2.x plugins
+  // register their own route on `webServer` and fence it with
+  // `connection.requestRejection` (see @deepseek-ai/dsh-host-open-in-app); this channel
+  // does the same while speaking the identical Connection RPC envelope.
+  ctx.effect(() => ctx.webServer.register({
+    kind: 'prefix',
+    path: '/zentao',
+    handler: async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+      const rejection = ctx.connection.requestRejection(req)
+      if (rejection !== undefined) {
+        res.writeHead(rejection, { 'content-type': 'text/plain' })
+        res.end(rejection === 401 ? 'unauthorized' : 'forbidden')
+        return
+      }
+      const pathname = new URL(req.url ?? '/', 'http://localhost').pathname
+      const endpoint = pathname.startsWith('/zentao/') ? pathname.slice('/zentao/'.length) : undefined
+      if (req.method !== 'POST' || endpoint === undefined || endpoint === '' || endpoint.split('/').some((segment) => segment === '' || segment === '.' || segment === '..')) {
+        res.writeHead(404, { 'content-type': 'text/plain' })
+        res.end('not found')
+        return
+      }
+      const contentType = req.headers['content-type']?.split(';', 1)[0]?.trim().toLowerCase()
+      if (contentType !== 'application/json') {
+        res.writeHead(415, { 'content-type': 'text/plain' })
+        res.end('content type must be application/json')
+        return
+      }
+      const chunks: Buffer[] = []
+      try {
+        for await (const chunk of req) chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk as Buffer)
+      } catch {
+        res.writeHead(400, { 'content-type': 'text/plain' })
+        res.end('body could not be read')
+        return
+      }
+      let message: Record<string, unknown>
+      try {
+        message = JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>
+      } catch {
+        res.writeHead(400, { 'content-type': 'text/plain' })
+        res.end('body is not JSON')
+        return
+      }
+      const rpcId = typeof message.rpcId === 'string' ? message.rpcId : ''
+      const send = (status: number, result: RpcResult<unknown>): void => {
+        res.writeHead(status, { 'content-type': 'application/json' })
+        res.end(JSON.stringify({ type: 'server-response', rpcId, result }))
+      }
+      if (message.type !== 'client-request' || rpcId === '' || typeof message.method !== 'string') {
+        send(200, failure('invalid client-request message'))
+        return
+      }
+      if (message.method !== endpoint) {
+        send(200, { ok: false, error: { code: 'gateway/bad-request', message: `method ${JSON.stringify(message.method)} does not match endpoint ${JSON.stringify(endpoint)}`, details: {} } })
+        return
+      }
+      // A node-style route has no Fetch `Request`, so the abort signal the fetch handler
+      // used to receive must be synthesized from the connection lifecycle.
+      const controller = new AbortController()
+      const abort = (): void => controller.abort()
+      req.once('aborted', abort)
+      res.once('close', () => { if (!res.writableEnded) abort() })
+      try {
+        send(200, await handleRpc(endpoint, message.payload, controller.signal))
+      } catch (error) {
+        res.writeHead(500, { 'content-type': 'text/plain' })
+        res.end(`handler failure: ${String(error)}`)
+      }
+    },
+  }), 'zentao: /zentao rpc channel')
 
   // Agent-facing tool: lets the LLM read ZenTao directly, reusing the same login
   // state as the sidebar (`~/.zentao-sidebar-config.json`).

@@ -1,8 +1,10 @@
 {
   "name": "@haoyu-qi/dsh-host-zentao-cli-gateway",
   "description": "Loopback Web gateway for personal ZenTao tasks, bugs and stories through the ZenTao REST API v2",
-  "version": "0.1.0-rc.9",
-  "publishConfig": { "access": "public" },
+  "version": "0.1.0-rc.10",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/haoyu-qi/dsh-zentao.git",
@@ -12,26 +14,38 @@
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "exports": {
-    ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
-    "./invariant": { "types": "./lib/types/invariant.d.ts", "default": "./lib/invariant.js" },
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
     "./package.json": "./package.json"
   },
-  "files": ["lib/index.js", "lib/invariant.js", "lib/types/**/*.d.ts"],
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "lib/types/**/*.d.ts"
+  ],
   "license": "MIT",
   "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
     "@deepseek-ai/dsh-client-connection": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-host-webserver": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-invariants": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-subprocess": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-system-prompt": "^0.2.0-rc.2",
-    "@deepseek-ai/dsh-tools": "^0.2.0-rc.2",
-    "@deepseek-ai/cordis": "^4.0.1"
+    "@deepseek-ai/dsh-tools": "^0.2.0-rc.2"
   },
   "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
     "@deepseek-ai/dsh-client-connection": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-host-webserver": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-invariants": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-subprocess": "^0.2.0-rc.2",
     "@deepseek-ai/dsh-system-prompt": "^0.2.0-rc.2",
-    "@deepseek-ai/dsh-tools": "^0.2.0-rc.2",
-    "@deepseek-ai/cordis": "^4.0.1"
+    "@deepseek-ai/dsh-tools": "^0.2.0-rc.2"
   }
 }
